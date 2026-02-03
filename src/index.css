@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --dida-primary: #1890FF;
+    --dida-sidebar: #F5F5F5;
+    --dida-highlight: #E6F7FF;
+    --dida-text-main: #333333;
+    --dida-text-secondary: #888888;
+
+    /* 优先级颜色 */
+    --priority-high: #FF4D4F;
+    --priority-medium: #FFA940;
+    --priority-low: #40A9FF;
+    --priority-none: #D9D9D9;
+
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'STHeiti', 'Microsoft Yahei', Tahoma, Simsun, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    color-scheme: light;
+    color: var(--dida-text-main);
+    background-color: #ffffff;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #root {
+    width: 100%;
+    height: 100%;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+
+  /* 自定义 Checkbox 样式 - 模拟滴答清单 */
+  .dida-checkbox {
+    @apply w-[18px] h-[18px] rounded-[4px] border-[2px] cursor-pointer transition-all flex items-center justify-center relative;
+  }
+
+  .dida-checkbox.priority-none {
+    border-color: var(--priority-none);
+  }
+
+  .dida-checkbox.priority-low {
+    border-color: var(--priority-low);
+  }
+
+  .dida-checkbox.priority-medium {
+    border-color: var(--priority-medium);
+  }
+
+  .dida-checkbox.priority-high {
+    border-color: var(--priority-high);
+  }
+
+  .dida-checkbox:hover {
+    @apply scale-105;
+  }
+
+  /* 适配 TW4 的透明度或直接使用颜色 */
+  .dida-checkbox.completed {
+    background-color: #888888;
+    border-color: #888888;
+  }
+
+  .dida-checkbox.completed::after {
+    content: '';
+    @apply w-[10px] h-[6px] border-b-[2px] border-l-[2px] border-white -rotate-45 mt-[-2px];
+  }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}

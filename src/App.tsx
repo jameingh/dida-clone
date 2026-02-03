@@ -1,0 +1,31 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import MainLayout from './components/Layout/MainLayout';
+import TaskList from './components/Task/TaskList';
+import TaskDetail from './components/Task/TaskDetail';
+import './index.css';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MainLayout>
+        <div className="flex h-full">
+          <div className="flex-1">
+            <TaskList />
+          </div>
+          <TaskDetail />
+        </div>
+      </MainLayout>
+    </QueryClientProvider>
+  );
+}
+
+export default App;
