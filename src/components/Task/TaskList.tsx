@@ -1,14 +1,76 @@
-import { useTasks, useCreateTaskSimple } from '../../hooks/useTasks';
+import { useState, useRef, useEffect } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { useTasks, useCreateTaskSimple, useUpdateTaskOrders } from '../../hooks/useTasks';
 import { useAppStore } from '../../store/useAppStore';
 import TaskItem from './TaskItem';
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { Task } from '../../types';
 
 export default function TaskList() {
   const { selectedListId } = useAppStore();
   const { data: tasks, isLoading } = useTasks(selectedListId || undefined);
   const createTask = useCreateTaskSimple();
+  const updateTaskOrders = useUpdateTaskOrders();
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // 本地排序状态，用于流畅的拖拽响应
+  const [localTasks, setLocalTasks] = useState<Task[]>(tasks || []);
+
+  useEffect(() => {
+    if (tasks) {
+      setLocalTasks(tasks);
+    }
+  }, [tasks]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = localTasks.findIndex((t) => t.id === active.id);
+    const newIndex = localTasks.findIndex((t) => t.id === over.id);
+
+    const newTasks = arrayMove(localTasks, oldIndex, newIndex);
+    setLocalTasks(newTasks);
+
+    // 准备批量更新数据
+    const ascendingOrders: [string, number][] = newTasks.map((t, index) => [
+      t.id,
+      index * 10,
+    ]);
+
+    updateTaskOrders.mutate(ascendingOrders);
+  };
+
+  useEffect(() => {
+    const handleFocus = () => {
+      inputRef.current?.focus();
+    };
+
+    window.addEventListener('focus-task-input', handleFocus);
+    return () => window.removeEventListener('focus-task-input', handleFocus);
+  }, []);
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,35 +91,44 @@ export default function TaskList() {
     );
   }
 
-  const incompleteTasks = tasks?.filter((task) => !task.completed) || [];
-  const completedTasks = tasks?.filter((task) => task.completed) || [];
+  const incompleteTasks = localTasks.filter((task) => !task.completed);
+  const completedTasks = localTasks.filter((task) => task.completed);
 
   return (
     <div className="h-full flex flex-col bg-white">
       {/* 任务列表 */}
       <div className="flex-1 overflow-y-auto pt-2">
-        {/* 未完成任务 */}
-        <div>
-          {incompleteTasks.map((task) => (
-            <TaskItem key={task.id} task={task} />
-          ))}
-        </div>
-
-        {/* 已完成任务 */}
-        {completedTasks.length > 0 && (
-          <div className="mt-8">
-            <div className="px-4 py-2 text-[12px] font-bold text-gray-400">
-              已完成 ({completedTasks.length})
-            </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToVerticalAxis]}
+        >
+          <SortableContext items={localTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            {/* 未完成任务 */}
             <div>
-              {completedTasks.map((task) => (
+              {incompleteTasks.map((task) => (
                 <TaskItem key={task.id} task={task} />
               ))}
             </div>
-          </div>
-        )}
 
-        {tasks?.length === 0 && (
+            {/* 已完成任务 */}
+            {completedTasks.length > 0 && (
+              <div className="mt-8">
+                <div className="px-4 py-2 text-[12px] font-bold text-gray-400">
+                  已完成 ({completedTasks.length})
+                </div>
+                <div>
+                  {completedTasks.map((task) => (
+                    <TaskItem key={task.id} task={task} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </SortableContext>
+        </DndContext>
+
+        {localTasks.length === 0 && (
           <div className="flex flex-col items-center justify-center h-64 text-gray-300">
             <div className="text-5xl mb-4">✨</div>
             <div className="text-[13px] font-medium">今天没有任务，享受生活吧</div>
@@ -65,16 +136,19 @@ export default function TaskList() {
         )}
       </div>
 
-      {/* 添加任务输入框 - 滴答清单风格 */}
-      <div className="px-4 py-3 border-t border-gray-100">
-        <form onSubmit={handleAddTask} className="flex items-center gap-3 bg-gray-50 px-3 py-2 rounded-md group hover:bg-gray-100 transition-colors focus-within:bg-white focus-within:ring-1 focus-within:ring-[#1890FF]">
-          <Plus className="w-5 h-5 text-gray-400" />
+      {/* 快捷添加栏 */}
+      <div className="p-4 border-t border-gray-100 pb-8">
+        <form onSubmit={handleAddTask} className="relative group">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2">
+            <Plus className="w-5 h-5 text-gray-400 group-focus-within:text-[#1890FF] transition-colors" />
+          </div>
           <input
+            ref={inputRef}
             type="text"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             placeholder="添加任务到..."
-            className="flex-1 bg-transparent outline-none text-[14px] text-gray-700 placeholder:text-gray-400"
+            className="w-full pl-12 pr-4 py-2.5 bg-gray-50 hover:bg-gray-100 focus:bg-white border-none rounded-xl text-[14px] outline-none ring-1 ring-transparent focus:ring-[#1890FF]/20 transition-all placeholder:text-gray-400"
           />
         </form>
       </div>

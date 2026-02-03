@@ -236,6 +236,21 @@ impl TaskRepository {
         Ok(())
     }
 
+    pub fn update_orders(db: &Database, orders: Vec<(String, i32)>) -> Result<()> {
+        let mut conn = db.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        {
+            let mut stmt = tx.prepare("UPDATE tasks SET order_num = ?1 WHERE id = ?2")?;
+            for (id, order_num) in orders {
+                stmt.execute(params![order_num, id])?;
+            }
+        }
+
+        tx.commit()?;
+        Ok(())
+    }
+
     fn get_task_tags(conn: &rusqlite::Connection, task_id: &str) -> rusqlite::Result<Vec<String>> {
         let mut stmt = conn.prepare(
             "SELECT tag_id FROM task_tags WHERE task_id = ?1"

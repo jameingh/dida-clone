@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { Task, Priority } from '../../types';
-import { useToggleTask } from '../../hooks/useTasks';
+import { useToggleTask, useUpdateTask, useDeleteTask } from '../../hooks/useTasks';
 import { useAppStore } from '../../store/useAppStore';
-import { Calendar } from 'lucide-react';
+import { Calendar, GripVertical, MoreHorizontal, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import ContextMenu, { ContextMenuItem, ContextMenuSeparator } from '../Common/ContextMenu';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TaskItemProps {
   task: Task;
@@ -10,16 +14,64 @@ interface TaskItemProps {
 
 export default function TaskItem({ task }: TaskItemProps) {
   const toggleTask = useToggleTask();
+  const deleteTask = useDeleteTask();
+  const updateTask = useUpdateTask();
   const { selectedTaskId, setSelectedTaskId } = useAppStore();
   const isSelected = selectedTaskId === task.id;
+
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+
+  // dnd-kit sortable hook
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    position: 'relative' as const,
+  };
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleTask.mutate(task.id);
   };
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    // 如果正在拖拽，不触发点击
+    if (isDragging) return;
     setSelectedTaskId(task.id);
+  };
+
+  const handleDelete = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (confirm('确定要删除这个任务吗？')) {
+      deleteTask.mutate(task.id);
+    }
+    setMenuPos(null);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuPos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleSetPriority = (priority: Priority) => {
+    updateTask.mutate({ ...task, priority });
+    setMenuPos(null);
+  };
+
+  const handleSetDate = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    updateTask.mutate({ ...task, due_date: Math.floor(date.getTime() / 1000) });
+    setMenuPos(null);
   };
 
   const getPriorityClass = (priority: Priority) => {
@@ -32,53 +84,129 @@ export default function TaskItem({ task }: TaskItemProps) {
   };
 
   return (
-    <div
-      onClick={handleClick}
-      className={`group flex items-start gap-4 px-4 py-3 border-b border-gray-50 cursor-pointer transition-colors ${isSelected ? 'bg-[#F0F7FF]' : 'hover:bg-[#FAFAFA]'
-        }`}
-    >
-      {/* 滴答清单风格 Checkbox */}
-      <div className="flex-shrink-0 mt-0.5">
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        className={`group flex items-center gap-1 px-1 py-1.5 border-b border-gray-50 cursor-pointer transition-colors ${isSelected ? 'bg-[#F0F7FF]' : 'hover:bg-[#FAFAFA]'
+          } ${isDragging ? 'opacity-50 shadow-lg bg-white ring-1 ring-blue-100 rounded-sm' : ''}`}
+      >
+        {/* 拖拽手柄 - 悬浮可见 */}
         <div
-          onClick={handleToggle}
-          className={`dida-checkbox ${getPriorityClass(task.priority)} ${task.completed ? 'completed' : ''}`}
-        />
-      </div>
-
-      {/* 任务内容 */}
-      <div className="flex-1 min-w-0">
-        <div
-          className={`text-[14px] leading-tight mb-1 ${task.completed ? 'line-through text-gray-400' : 'text-gray-800 font-medium'
-            }`}
+          {...attributes}
+          {...listeners}
+          className="w-6 flex items-center justify-center opacity-0 group-hover:opacity-30 transition-opacity cursor-grab active:cursor-grabbing"
         >
-          {task.title}
+          <GripVertical className="w-4 h-4 text-gray-600" />
         </div>
 
-        {/* 任务元信息 */}
-        <div className="flex items-center gap-3">
-          {task.due_date && (
-            <div className="flex items-center gap-1 text-[11px] text-gray-400 font-medium">
-              <Calendar className="w-3 h-3" />
-              <span>
-                {format(new Date(task.due_date * 1000), 'M月d日')}
-              </span>
-            </div>
-          )}
+        {/* 滴答清单风格 Checkbox */}
+        <div className="flex-shrink-0 flex items-center justify-center w-6">
+          <div
+            onClick={handleToggle}
+            className={`dida-checkbox ${getPriorityClass(task.priority)} ${task.completed ? 'completed' : ''}`}
+          />
+        </div>
 
-          {task.tags.length > 0 && (
-            <div className="flex gap-1">
-              {task.tags.slice(0, 2).map((tagId) => (
-                <span
-                  key={tagId}
-                  className="px-1.5 py-0.5 text-[10px] bg-gray-100 text-gray-400 rounded-sm font-medium"
-                >
-                  #{tagId}
-                </span>
-              ))}
-            </div>
-          )}
+        {/* 任务内容 */}
+        <div className="flex-1 min-w-0 px-1">
+          <div
+            className={`text-[14px] leading-tight truncate ${task.completed ? 'line-through text-gray-400' : 'text-gray-800 font-medium'
+              }`}
+          >
+            {task.title}
+          </div>
+
+          {/* 简洁元信息 */}
+          <div className="flex items-center gap-2 mt-0.5">
+            {task.due_date && (
+              <div className="flex items-center gap-0.5 text-[10px] text-gray-400 font-medium">
+                <Calendar className="w-2.5 h-2.5" />
+                <span>{format(new Date(task.due_date * 1000), 'M月d日')}</span>
+              </div>
+            )}
+            {task.tags.length > 0 && (
+              <div className="flex gap-1">
+                {task.tags.slice(0, 1).map((tagId) => (
+                  <span key={tagId} className="text-[10px] text-gray-400">#{tagId}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 快速操作 - 仅悬浮可见 */}
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity pr-2">
+          <button
+            title="设置日期"
+            className="p-1 px-1.5 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+          </button>
+          <button
+            title="删除"
+            onClick={handleDelete}
+            className="p-1 px-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            title="更多"
+            onClick={handleContextMenu}
+            className="p-1 px-1.5 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <MoreHorizontal className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
-    </div>
+
+      {menuPos && (
+        <ContextMenu x={menuPos.x} y={menuPos.y} onClose={() => setMenuPos(null)}>
+          <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">截止日期</div>
+          <ContextMenuItem label="今天" onClick={() => handleSetDate(0)} />
+          <ContextMenuItem label="明天" onClick={() => handleSetDate(1)} />
+          <ContextMenuItem label="下周" onClick={() => handleSetDate(7)} />
+
+          <ContextMenuSeparator />
+
+          <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">优先级</div>
+          <ContextMenuItem
+            label="高优先级"
+            active={task.priority === Priority.High}
+            onClick={() => handleSetPriority(Priority.High)}
+            icon={<div className="w-2 h-2 rounded-full bg-red-500" />}
+          />
+          <ContextMenuItem
+            label="中优先级"
+            active={task.priority === Priority.Medium}
+            onClick={() => handleSetPriority(Priority.Medium)}
+            icon={<div className="w-2 h-2 rounded-full bg-orange-500" />}
+          />
+          <ContextMenuItem
+            label="低优先级"
+            active={task.priority === Priority.Low}
+            onClick={() => handleSetPriority(Priority.Low)}
+            icon={<div className="w-2 h-2 rounded-full bg-blue-500" />}
+          />
+          <ContextMenuItem
+            label="无优先级"
+            active={task.priority === Priority.None}
+            onClick={() => handleSetPriority(Priority.None)}
+            icon={<div className="w-2 h-2 rounded-full bg-gray-300" />}
+          />
+
+          <ContextMenuSeparator />
+
+          <ContextMenuItem
+            label="删除任务"
+            danger
+            onClick={() => handleDelete()}
+            icon={<Trash2 className="w-4 h-4" />}
+          />
+        </ContextMenu>
+      )}
+    </>
   );
 }

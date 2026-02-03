@@ -1,16 +1,68 @@
-import { useTask, useSubtasks, useCreateSubtaskSimple } from '../../hooks/useTasks';
+import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders } from '../../hooks/useTasks';
 import { useAppStore } from '../../store/useAppStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus } from 'lucide-react';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, GripVertical } from 'lucide-react';
 import { Priority } from '../../types';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import SubtaskItem from './SubtaskItem';
+
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { CSS } from '@dnd-kit/utilities';
 
 export default function TaskDetail() {
   const { selectedTaskId, setSelectedTaskId } = useAppStore();
   const { data: task, isLoading } = useTask(selectedTaskId || '');
   const { data: subtasks } = useSubtasks(selectedTaskId || '');
   const createSubtask = useCreateSubtaskSimple();
+  const updateTaskOrders = useUpdateTaskOrders();
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+
+  // 本地子任务状态，用于流畅的拖放响应
+  const [localSubtasks, setLocalSubtasks] = useState(subtasks || []);
+
+  useEffect(() => {
+    if (subtasks) {
+      setLocalSubtasks(subtasks);
+    }
+  }, [subtasks, selectedTaskId]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = localSubtasks.findIndex((t) => t.id === active.id);
+    const newIndex = localSubtasks.findIndex((t) => t.id === over.id);
+
+    const newSubtasks = arrayMove(localSubtasks, oldIndex, newIndex);
+    setLocalSubtasks(newSubtasks);
+
+    const ascendingOrders: [string, number][] = newSubtasks.map((t, index) => [
+      t.id,
+      index * 10,
+    ]);
+
+    updateTaskOrders.mutate(ascendingOrders);
+  };
 
   const handleAddSubtask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,14 +141,23 @@ export default function TaskDetail() {
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-[12px] font-bold text-gray-400 uppercase tracking-tighter">
             <ListTodo className="w-3.5 h-3.5" />
-            <span>子任务 {subtasks?.length ? `(${subtasks.length})` : ''}</span>
+            <span>子任务 {localSubtasks.length ? `(${localSubtasks.length})` : ''}</span>
           </div>
 
-          <div className="space-y-0.5">
-            {subtasks?.map((subtask) => (
-              <SubtaskItem key={subtask.id} subtask={subtask} />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+          >
+            <SortableContext items={localSubtasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-0.5">
+                {localSubtasks.map((subtask) => (
+                  <SubtaskItem key={subtask.id} subtask={subtask} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
 
           <form onSubmit={handleAddSubtask} className="flex items-center gap-2 py-1 px-2 group">
             <Plus className="w-4 h-4 text-gray-300 group-hover:text-[#1890FF] transition-colors" />

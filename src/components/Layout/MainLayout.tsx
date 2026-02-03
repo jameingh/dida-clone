@@ -1,12 +1,14 @@
 import { ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useShortcuts } from '../../hooks/useShortcuts';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
+  useShortcuts();
   return (
     <div className="flex h-screen bg-white">
       <Sidebar />

@@ -60,13 +60,29 @@ export function useCreateSubtaskSimple() {
   });
 }
 
+export function useUpdateTaskOrders() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (orders: [string, number][]) => taskService.updateTaskOrders(orders),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['subtasks'] });
+    },
+  });
+}
+
 export function useUpdateTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (task: Task) => taskService.updateTask(task),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      if (variables.parent_id) {
+        queryClient.invalidateQueries({ queryKey: ['subtasks', variables.parent_id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['task', variables.id] });
     },
   });
 }
@@ -78,6 +94,7 @@ export function useDeleteTask() {
     mutationFn: (taskId: string) => taskService.deleteTask(taskId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['subtasks'] });
     },
   });
 }
@@ -89,6 +106,8 @@ export function useToggleTask() {
     mutationFn: (taskId: string) => taskService.toggleTask(taskId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['subtasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task'] });
     },
   });
 }

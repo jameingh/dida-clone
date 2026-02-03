@@ -18,6 +18,10 @@ export const taskService = {
     return await invoke('create_subtask_simple', { title, parentId, listId });
   },
 
+  async updateTaskOrders(orders: [string, number][]): Promise<void> {
+    return await invoke('update_task_orders', { orders });
+  },
+
   async getTasks(listId?: string): Promise<Task[]> {
     return await invoke('get_tasks', { listId });
   },

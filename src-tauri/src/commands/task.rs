@@ -5,6 +5,11 @@ use crate::state::AppState;
 use tauri::State;
 
 #[tauri::command]
+pub async fn update_task_orders(orders: Vec<(String, i32)>, state: State<'_, AppState>) -> Result<()> {
+    TaskRepository::update_orders(&state.db, orders)
+}
+
+#[tauri::command]
 pub async fn create_task(task: Task, state: State<'_, AppState>) -> Result<Task> {
     TaskRepository::create(&state.db, &task)
 }

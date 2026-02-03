@@ -36,6 +36,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             // 任务命令
+            commands::task::update_task_orders,
             commands::task::create_task,
             commands::task::create_task_simple,
             commands::task::get_subtasks,
