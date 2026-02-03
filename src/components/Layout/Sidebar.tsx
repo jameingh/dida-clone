@@ -35,8 +35,10 @@ export default function Sidebar() {
   };
 
   const isLoading = isListsLoading || isTagsLoading;
+  const isInitialLoading = isLoading && !lists && !tags;
 
-  if (isLoading) {
+  // 只在首次进入应用时显示“加载中”，后续切换保持界面内容不闪烁
+  if (isInitialLoading) {
     return (
       <aside className="w-64 bg-white border-r border-gray-200 p-4">
         <div className="text-sm text-gray-500">加载中...</div>
