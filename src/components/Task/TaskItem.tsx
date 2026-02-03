@@ -85,6 +85,16 @@ export default function TaskItem({ task }: TaskItemProps) {
     }
   };
 
+  // 直接使用全局 CSS 变量，保证和优先级颜色 100% 一致
+  const getPriorityColorVar = (priority: Priority) => {
+    switch (priority) {
+      case Priority.High: return 'var(--priority-high)';
+      case Priority.Medium: return 'var(--priority-medium)';
+      case Priority.Low: return 'var(--priority-low)';
+      default: return 'var(--priority-none)';
+    }
+  };
+
   return (
     <>
       <div
@@ -109,6 +119,14 @@ export default function TaskItem({ task }: TaskItemProps) {
           <div
             onClick={handleToggle}
             className={`dida-checkbox ${getPriorityClass(task.priority)} ${task.completed ? 'completed' : ''}`}
+            style={{
+              // 边框颜色和优先级颜色保持一致
+              borderColor: getPriorityColorVar(task.priority),
+              // 未完成时用浅色背景，完成后用实色背景
+              backgroundColor: task.completed
+                ? getPriorityColorVar(task.priority)
+                : 'color-mix(in srgb, ' + getPriorityColorVar(task.priority) + ' 18%, #ffffff 82%)',
+            }}
           />
         </div>
 

@@ -41,6 +41,7 @@ description: 滴答清单克隆项目 (Tauri 2.0 + React 19) 专用助手。
 参考技术指引：
 - [/Users/akm/JieYueAI/tauri-skills-quick-reference.md](file:///Users/akm/JieYueAI/tauri-skills-quick-reference.md)
 - `~/.cline/skills/` 下的 `tauri-architecture`, `rust-pro`, `typescript-pro` 等。
+- `/Users/akm/Documents/agent-browser/skills/agent-browser/SKILL.md`
 
 ## 📝 交互指引
 1. **先思考后行动**: 在修改代码前，先分析对两端的影响。

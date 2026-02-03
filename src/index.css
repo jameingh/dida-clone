@@ -71,8 +71,7 @@
 
   /* 适配 TW4 的透明度或直接使用颜色 */
   .dida-checkbox.completed {
-    background-color: #888888;
-    border-color: #888888;
+    opacity: 0.6;
   }
 
   .dida-checkbox.completed::after {
