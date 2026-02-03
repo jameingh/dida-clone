@@ -10,6 +10,33 @@ export const taskService = {
     return await invoke('create_task_simple', { title, listId });
   },
 
+  async createTaskExtended(
+    title: string,
+    listId: string,
+    dueDate?: number,
+    priority?: number,
+    tags?: string[],
+    description?: string
+  ): Promise<Task> {
+    const params = {
+      title,
+      listId,  // 使用 camelCase，Tauri 2.0 会自动映射到 Rust 的 snake_case
+      dueDate,
+      priority,
+      tags: tags || [],
+      description
+    };
+    console.log('createTaskExtended params:', params);
+    try {
+      const result = await invoke<Task>('create_task_extended', params);
+      console.log('createTaskExtended result:', result);
+      return result;
+    } catch (error) {
+      console.error('createTaskExtended error:', error);
+      throw error;
+    }
+  },
+
   async getSubtasks(parentId: string): Promise<Task[]> {
     return await invoke('get_subtasks', { parentId });
   },

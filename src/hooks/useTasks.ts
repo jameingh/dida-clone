@@ -45,6 +45,32 @@ export function useCreateTaskSimple() {
   });
 }
 
+export function useCreateTaskExtended() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      title,
+      listId,
+      dueDate,
+      priority,
+      tags,
+      description
+    }: {
+      title: string;
+      listId: string;
+      dueDate?: number;
+      priority?: number;
+      tags?: string[];
+      description?: string;
+    }) =>
+      taskService.createTaskExtended(title, listId, dueDate, priority, tags, description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
 export function useSubtasks(parentId: string) {
   return useQuery({
     queryKey: ['subtasks', parentId],

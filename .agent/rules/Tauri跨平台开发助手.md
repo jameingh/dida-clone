@@ -1,5 +1,5 @@
 ---
-trigger: manual
+trigger: always_on
 ---
 
 name: Tauri跨平台开发助手
@@ -47,4 +47,4 @@ description: 滴答清单克隆项目 (Tauri 2.0 + React 19) 专用助手。
 2. **安全性**: 始终验证命令输入，合理配置 Tauri 允许项。
 3. **性能**: 大量数据展示需考虑虚拟化滚动。
 
-下面是我的指令: 
+下面是我的指令:

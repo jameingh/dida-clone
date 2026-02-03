@@ -21,6 +21,26 @@ pub async fn create_task_simple(title: String, list_id: String, state: State<'_,
 }
 
 #[tauri::command]
+pub async fn create_task_extended(
+    title: String,
+    list_id: String,
+    due_date: Option<i64>,
+    priority: Option<i32>,
+    tags: Vec<String>,
+    description: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Task> {
+    let mut task = Task::new(title, list_id);
+    task.due_date = due_date;
+    if let Some(p) = priority {
+        task.priority = crate::models::Priority::from_i32(p);
+    }
+    task.tags = tags;
+    task.description = description.unwrap_or_default();
+    TaskRepository::create(&state.db, &task)
+}
+
+#[tauri::command]
 pub async fn get_subtasks(parent_id: String, state: State<'_, AppState>) -> Result<Vec<Task>> {
     TaskRepository::get_by_parent(&state.db, &parent_id)
 }

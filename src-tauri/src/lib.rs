@@ -39,6 +39,7 @@ pub fn run() {
             commands::task::update_task_orders,
             commands::task::create_task,
             commands::task::create_task_simple,
+            commands::task::create_task_extended,
             commands::task::get_subtasks,
             commands::task::create_subtask_simple,
             commands::task::get_tasks_by_tag,
