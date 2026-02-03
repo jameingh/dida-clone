@@ -20,8 +20,8 @@ import { Plus } from 'lucide-react';
 import { Task } from '../../types';
 
 export default function TaskList() {
-  const { selectedListId } = useAppStore();
-  const { data: tasks, isLoading } = useTasks(selectedListId || undefined);
+  const { selectedListId, selectedTagId } = useAppStore();
+  const { data: tasks, isLoading } = useTasks(selectedListId || undefined, selectedTagId || undefined);
   const createTask = useCreateTaskSimple();
   const updateTaskOrders = useUpdateTaskOrders();
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -96,8 +96,25 @@ export default function TaskList() {
 
   return (
     <div className="h-full flex flex-col bg-white">
+      {/* 顶部快速添加栏 */}
+      <div className="px-4 py-3 shrink-0">
+        <form onSubmit={handleAddTask} className="relative group">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2">
+            <Plus className="w-5 h-5 text-gray-400 group-focus-within:text-[#1890FF] transition-colors" />
+          </div>
+          <input
+            ref={inputRef}
+            type="text"
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            placeholder="添加任务..."
+            className="w-full pl-10 pr-4 py-2.5 bg-[#F5F5F5] focus:bg-white border text-[14px] border-transparent focus:border-gray-200 rounded text-gray-700 outline-none transition-all placeholder:text-gray-400"
+          />
+        </form>
+      </div>
+
       {/* 任务列表 */}
-      <div className="flex-1 overflow-y-auto pt-2">
+      <div className="flex-1 overflow-y-auto w-full">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -134,23 +151,6 @@ export default function TaskList() {
             <div className="text-[13px] font-medium">今天没有任务，享受生活吧</div>
           </div>
         )}
-      </div>
-
-      {/* 快捷添加栏 */}
-      <div className="p-4 border-t border-gray-100 pb-8">
-        <form onSubmit={handleAddTask} className="relative group">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2">
-            <Plus className="w-5 h-5 text-gray-400 group-focus-within:text-[#1890FF] transition-colors" />
-          </div>
-          <input
-            ref={inputRef}
-            type="text"
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="添加任务到..."
-            className="w-full pl-12 pr-4 py-2.5 bg-gray-50 hover:bg-gray-100 focus:bg-white border-none rounded-xl text-[14px] outline-none ring-1 ring-transparent focus:ring-[#1890FF]/20 transition-all placeholder:text-gray-400"
-          />
-        </form>
       </div>
     </div>
   );

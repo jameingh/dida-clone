@@ -1,8 +1,9 @@
-import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders } from '../../hooks/useTasks';
+import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useUpdateTask } from '../../hooks/useTasks';
+import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, GripVertical } from 'lucide-react';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash } from 'lucide-react';
 import { Priority } from '../../types';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SubtaskItem from './SubtaskItem';
 
 import {
@@ -19,15 +20,40 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { CSS } from '@dnd-kit/utilities';
 
 export default function TaskDetail() {
   const { selectedTaskId, setSelectedTaskId } = useAppStore();
   const { data: task, isLoading } = useTask(selectedTaskId || '');
   const { data: subtasks } = useSubtasks(selectedTaskId || '');
+  const { data: allTags } = useTags();
   const createSubtask = useCreateSubtaskSimple();
   const updateTaskOrders = useUpdateTaskOrders();
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const updateTask = useUpdateTask();
+  const [newSubtaskTitle, setNewTaskTitle] = useState('');
+
+  const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
+  const tagPopoverRef = useRef<HTMLDivElement>(null);
+  const tagTriggerRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭标签 Popover
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isTagPopoverOpen &&
+        tagPopoverRef.current &&
+        !tagPopoverRef.current.contains(event.target as Node) &&
+        tagTriggerRef.current &&
+        !tagTriggerRef.current.contains(event.target as Node)
+      ) {
+        setIsTagPopoverOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isTagPopoverOpen]);
 
   // 本地子任务状态，用于流畅的拖放响应
   const [localSubtasks, setLocalSubtasks] = useState(subtasks || []);
@@ -72,8 +98,21 @@ export default function TaskDetail() {
         parentId: task.id,
         listId: task.list_id,
       });
-      setNewSubtaskTitle('');
+      setNewTaskTitle('');
     }
+  };
+
+  const handleToggleTag = (tagId: string) => {
+    if (!task) return;
+    const currentTags = task.tags || [];
+    const newTags = currentTags.includes(tagId)
+      ? currentTags.filter(id => id !== tagId)
+      : [...currentTags, tagId];
+
+    updateTask.mutate({
+      ...task,
+      tags: newTags
+    });
   };
 
   if (!selectedTaskId) {
@@ -98,7 +137,7 @@ export default function TaskDetail() {
   if (!task) return null;
 
   return (
-    <div className="w-96 border-l border-gray-200 bg-white flex flex-col">
+    <div className="w-96 border-l border-gray-200 bg-white flex flex-col relative">
       {/* 头部 */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100 mb-2">
         <div className="flex items-center gap-2">
@@ -164,7 +203,7 @@ export default function TaskDetail() {
             <input
               type="text"
               value={newSubtaskTitle}
-              onChange={(e) => setNewSubtaskTitle(e.target.value)}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
               placeholder="添加子任务..."
               className="flex-1 bg-transparent outline-none text-[13px] text-gray-700 placeholder:text-gray-300"
             />
@@ -172,7 +211,7 @@ export default function TaskDetail() {
         </div>
 
         {/* 设置属性 (日期, 优先级, 标签) */}
-        <div className="pt-4 border-t border-gray-50 space-y-4">
+        <div className="pt-4 border-t border-gray-50 space-y-4 pb-8">
           <div className="flex items-center justify-between text-[13px]">
             <div className="flex items-center gap-2 text-gray-400">
               <Calendar className="w-4 h-4" />
@@ -200,12 +239,67 @@ export default function TaskDetail() {
               ))}
             </div>
           </div>
+
+          <div className="flex items-start justify-between text-[13px]">
+            <div
+              ref={tagTriggerRef}
+              onClick={() => setIsTagPopoverOpen(!isTagPopoverOpen)}
+              className="flex items-center gap-2 text-gray-400 mt-1 cursor-pointer hover:text-gray-600 transition-colors"
+            >
+              <Hash className="w-4 h-4" />
+              <span>标签</span>
+            </div>
+            <div className="flex flex-wrap justify-end gap-1.5 flex-1 pl-4">
+              {Array.isArray(task.tags) && task.tags.map(tagId => {
+                const tagInfo = (allTags || []).find(t => t.id === tagId);
+                return (
+                  <span
+                    key={tagId}
+                    onClick={() => handleToggleTag(tagId)}
+                    className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-[11px] hover:bg-red-50 hover:text-red-500 cursor-pointer transition-colors"
+                  >
+                    {tagInfo?.name || tagId}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* 标签简易选择器 Popover */}
+      {isTagPopoverOpen && (
+        <div
+          ref={tagPopoverRef}
+          className="absolute bottom-24 right-6 w-48 bg-white border border-gray-100 shadow-xl rounded-lg p-2 z-50"
+        >
+          <div className="text-[11px] font-bold text-gray-400 px-2 py-1 uppercase tracking-tighter border-b border-gray-50 mb-1">选择标签</div>
+          <div className="max-h-48 overflow-y-auto">
+            {(allTags || []).map(tag => (
+              <div
+                key={tag.id}
+                onClick={() => handleToggleTag(tag.id)}
+                className="flex items-center justify-between px-2 py-1.5 hover:bg-[#F0F7FF] rounded-md cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#CBD5E0' }} />
+                  <span className="text-[13px] text-gray-700">{tag.name}</span>
+                </div>
+                {Array.isArray(task.tags) && task.tags.includes(tag.id) && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#1890FF]" />
+                )}
+              </div>
+            ))}
+            {(!allTags || allTags.length === 0) && (
+              <div className="px-2 py-4 text-center text-xs text-gray-400 italic">暂无可用标签</div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 底部信息 */}
       <div className="p-4 bg-gray-50/50 text-[11px] text-gray-400 border-t border-gray-100 italic">
-        创建于 {new Date(task.created_at * 1000).toLocaleString()}
+        创建于 {task.created_at ? new Date(task.created_at * 1000).toLocaleString() : '未知'}
       </div>
     </div>
   );

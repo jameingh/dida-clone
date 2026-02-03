@@ -151,6 +151,47 @@ impl TaskRepository {
         Ok(tasks_with_tags)
     }
 
+    pub fn get_by_tag(db: &Database, tag_id: &str) -> Result<Vec<Task>> {
+        let conn = db.conn.lock().unwrap();
+        
+        let mut stmt = conn.prepare(
+            "SELECT t.id, t.title, t.description, t.list_id, t.completed, t.priority, 
+             t.due_date, t.reminder, t.parent_id, t.order_num, t.created_at, t.updated_at, t.completed_at
+             FROM tasks t
+             INNER JOIN task_tags tt ON t.id = tt.task_id
+             WHERE tt.tag_id = ?1
+             ORDER BY t.order_num ASC, t.created_at DESC"
+        )?;
+
+        let tasks = stmt.query_map(params![tag_id], |row| {
+            Ok(Task {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                description: row.get(2)?,
+                list_id: row.get(3)?,
+                completed: row.get::<_, i32>(4)? != 0,
+                priority: Priority::from_i32(row.get(5)?),
+                due_date: row.get(6)?,
+                reminder: row.get(7)?,
+                parent_id: row.get(8)?,
+                order: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
+                completed_at: row.get(12)?,
+                tags: Vec::new(),
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<Task>>>()?;
+
+        let mut tasks_with_tags = Vec::new();
+        for task in tasks {
+            let tags = Self::get_task_tags(&conn, &task.id)?;
+            tasks_with_tags.push(Task { tags, ..task });
+        }
+
+        Ok(tasks_with_tags)
+    }
+
     pub fn get_by_parent(db: &Database, parent_id: &str) -> Result<Vec<Task>> {
         let conn = db.conn.lock().unwrap();
         

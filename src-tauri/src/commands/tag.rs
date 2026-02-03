@@ -5,8 +5,14 @@ use crate::state::AppState;
 use tauri::State;
 
 #[tauri::command]
-pub async fn create_tag(tag: Tag, state: State<'_, AppState>) -> Result<Tag> {
+pub async fn create_tag(name: String, color: String, state: State<'_, AppState>) -> Result<Tag> {
+    let tag = Tag::new(name, color);
     TagRepository::create(&state.db, &tag)
+}
+
+#[tauri::command]
+pub async fn update_tag(tag: Tag, state: State<'_, AppState>) -> Result<Tag> {
+    TagRepository::update(&state.db, &tag)
 }
 
 #[tauri::command]

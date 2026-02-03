@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import Sidebar from './Sidebar';
-import Header from './Header';
+import NavRail from './NavRail';
 import { useShortcuts } from '../../hooks/useShortcuts';
 
 interface MainLayoutProps {
@@ -11,13 +11,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
   useShortcuts();
   return (
     <div className="flex h-screen bg-white">
+      <NavRail />
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-hidden">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 flex flex-col overflow-hidden bg-white">
+        {children}
+      </main>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Task, Priority } from '../../types';
 import { useToggleTask, useUpdateTask, useDeleteTask } from '../../hooks/useTasks';
+import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { Calendar, GripVertical, MoreHorizontal, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -16,6 +17,7 @@ export default function TaskItem({ task }: TaskItemProps) {
   const toggleTask = useToggleTask();
   const deleteTask = useDeleteTask();
   const updateTask = useUpdateTask();
+  const { data: allTags } = useTags();
   const { selectedTaskId, setSelectedTaskId } = useAppStore();
   const isSelected = selectedTaskId === task.id;
 
@@ -129,9 +131,18 @@ export default function TaskItem({ task }: TaskItemProps) {
             )}
             {task.tags.length > 0 && (
               <div className="flex gap-1">
-                {task.tags.slice(0, 1).map((tagId) => (
-                  <span key={tagId} className="text-[10px] text-gray-400">#{tagId}</span>
-                ))}
+                {task.tags.slice(0, 3).map((tagId) => {
+                  const tag = allTags?.find(t => t.id === tagId);
+                  return (
+                    <span
+                      key={tagId}
+                      className="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-medium"
+                      style={tag ? { color: tag.color, backgroundColor: `${tag.color}15` } : undefined}
+                    >
+                      #{tag?.name || '未知'}
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>

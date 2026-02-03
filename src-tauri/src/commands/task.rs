@@ -33,6 +33,11 @@ pub async fn create_subtask_simple(title: String, parent_id: String, list_id: St
 }
 
 #[tauri::command]
+pub async fn get_tasks_by_tag(tag_id: String, state: State<'_, AppState>) -> Result<Vec<Task>> {
+    TaskRepository::get_by_tag(&state.db, &tag_id)
+}
+
+#[tauri::command]
 pub async fn get_tasks(list_id: Option<String>, state: State<'_, AppState>) -> Result<Vec<Task>> {
     match list_id {
         Some(id) => TaskRepository::get_by_list(&state.db, &id),

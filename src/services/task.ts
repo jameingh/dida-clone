@@ -22,6 +22,10 @@ export const taskService = {
     return await invoke('update_task_orders', { orders });
   },
 
+  async getTasksByTag(tagId: string): Promise<Task[]> {
+    return await invoke('get_tasks_by_tag', { tagId });
+  },
+
   async getTasks(listId?: string): Promise<Task[]> {
     return await invoke('get_tasks', { listId });
   },

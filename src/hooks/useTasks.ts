@@ -2,10 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskService } from '../services';
 import { Task } from '../types';
 
-export function useTasks(listId?: string) {
+export function useTasks(listId?: string, tagId?: string) {
   return useQuery({
-    queryKey: ['tasks', listId],
-    queryFn: () => taskService.getTasks(listId),
+    queryKey: ['tasks', listId, tagId],
+    queryFn: () => {
+      if (tagId) {
+        return taskService.getTasksByTag(tagId);
+      }
+      return taskService.getTasks(listId);
+    },
   });
 }
 

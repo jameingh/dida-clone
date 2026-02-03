@@ -56,6 +56,21 @@ impl TagRepository {
         Ok(tags)
     }
 
+    pub fn update(db: &Database, tag: &Tag) -> Result<Tag> {
+        let conn = db.conn.lock().unwrap();
+        
+        let rows_affected = conn.execute(
+            "UPDATE tags SET name = ?1, color = ?2 WHERE id = ?3",
+            params![tag.name, tag.color, tag.id],
+        )?;
+
+        if rows_affected == 0 {
+            return Err(AppError::NotFound(format!("Tag {} not found", tag.id)));
+        }
+
+        Ok(tag.clone())
+    }
+
     pub fn delete(db: &Database, tag_id: &str) -> Result<()> {
         let conn = db.conn.lock().unwrap();
         

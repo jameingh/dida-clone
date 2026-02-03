@@ -41,6 +41,7 @@ pub fn run() {
             commands::task::create_task_simple,
             commands::task::get_subtasks,
             commands::task::create_subtask_simple,
+            commands::task::get_tasks_by_tag,
             commands::task::get_tasks,
             commands::task::get_task,
             commands::task::update_task,
@@ -54,6 +55,7 @@ pub fn run() {
             commands::list::delete_list,
             // 标签命令
             commands::tag::create_tag,
+            commands::tag::update_tag,
             commands::tag::get_tags,
             commands::tag::delete_tag,
         ])
