@@ -168,15 +168,9 @@ export default function TaskItem({ task }: TaskItemProps) {
             {task.title}
           </div>
 
-          {/* 简洁元信息 */}
-          <div className="flex items-center gap-2 mt-0.5">
-            {task.due_date && (
-              <div className="flex items-center gap-0.5 text-[10px] text-gray-400 font-medium">
-                <Calendar className="w-2.5 h-2.5" />
-                <span>{format(new Date(task.due_date * 1000), 'M月d日')}</span>
-              </div>
-            )}
-            {task.tags.length > 0 && (
+          {/* 简洁元信息 - 仅保留标签 */}
+          {task.tags.length > 0 && (
+            <div className="flex items-center gap-2 mt-0.5">
               <div className="flex gap-1">
                 {task.tags.slice(0, 3).map((tagId) => {
                   const tag = allTags?.find(t => t.id === tagId);
@@ -191,9 +185,16 @@ export default function TaskItem({ task }: TaskItemProps) {
                   );
                 })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+
+        {/* 任务日期 - 移动到右侧 */}
+        {task.due_date && (
+          <div className="flex-shrink-0 flex items-center text-[11px] text-gray-400 font-medium px-2">
+            <span>{format(new Date(task.due_date * 1000), 'M月d日')}</span>
+          </div>
+        )}
 
         {/* 快速操作 - 仅悬浮可见 */}
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity pr-2">
@@ -216,19 +217,6 @@ export default function TaskItem({ task }: TaskItemProps) {
             </>
           ) : (
             <>
-              <button
-                title="设置日期"
-                className="p-1 px-1.5 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-              </button>
-              <button
-                title="删除"
-                onClick={handleDelete}
-                className="p-1 px-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
               <button
                 title="更多"
                 onClick={handleContextMenu}
