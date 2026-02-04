@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Edit2, ArrowUp, Plus, Merge, Share2, Trash2 } from 'lucide-react';
 
 interface TagContextMenuProps {

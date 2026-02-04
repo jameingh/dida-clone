@@ -426,10 +426,6 @@ export default function TaskList() {
                             setShowDatePicker(false);
                             setTimeout(() => inputRef.current?.focus(), 0);
                           }}
-                          onClose={() => {
-                            setShowDatePicker(false);
-                            setTimeout(() => inputRef.current?.focus(), 0);
-                          }}
                         />
                       </div>
                     )}

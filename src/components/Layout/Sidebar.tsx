@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
-import { useLists } from '../../hooks/useLists';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useLists, useCreateList } from '../../hooks/useLists';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
-import { Plus, Hash, ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { Plus, Hash, ChevronDown, ChevronRight, MoreHorizontal, Check, X } from 'lucide-react';
 import AddTagModal from '../Tag/AddTagModal';
 import TagContextMenu from '../Tag/TagContextMenu';
 import { Tag } from '../../types';
@@ -15,6 +15,7 @@ interface TagNode extends Tag {
 
 export default function Sidebar() {
   const { data: lists, isLoading: isListsLoading } = useLists();
+  const createList = useCreateList();
   const { data: tags, isLoading: isTagsLoading } = useTags();
   const { selectedListId, setSelectedListId, selectedTagId, setSelectedTagId } = useAppStore();
   const deleteTag = useDeleteTag();
@@ -27,6 +28,38 @@ export default function Sidebar() {
 
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);
   const [expandedTagIds, setExpandedTagIds] = useState<Set<string>>(new Set());
+
+  const [isAddingList, setIsAddingList] = useState(false);
+  const [newListTitle, setNewListTitle] = useState('');
+  const newListInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isAddingList) {
+      newListInputRef.current?.focus();
+    }
+  }, [isAddingList]);
+
+  const handleCreateList = () => {
+    if (!newListTitle.trim()) {
+      setIsAddingList(false);
+      return;
+    }
+
+    createList.mutate({
+      id: crypto.randomUUID(),
+      name: newListTitle.trim(),
+      icon: '📋',
+      color: '#3B82F6',
+      is_smart: false,
+      order: (lists?.length || 0),
+      created_at: Math.floor(Date.now() / 1000),
+    }, {
+      onSuccess: () => {
+        setIsAddingList(false);
+        setNewListTitle('');
+      }
+    });
+  };
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tag: Tag } | null>(null);
 
@@ -223,6 +256,7 @@ export default function Sidebar() {
               我的清单
             </div>
             <button
+              onClick={() => setIsAddingList(true)}
               className="text-gray-400 hover:text-[#1890FF] opacity-0 group-hover:opacity-100 transition-all p-0.5 rounded"
               title="新建清单"
             >
@@ -231,6 +265,28 @@ export default function Sidebar() {
           </div>
 
           <div className="space-y-0.5 mt-0.5">
+            {isAddingList && (
+              <div className="px-3 py-1.5 flex items-center gap-2">
+                <input
+                  ref={newListInputRef}
+                  type="text"
+                  value={newListTitle}
+                  onChange={(e) => setNewListTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreateList();
+                    if (e.key === 'Escape') setIsAddingList(false);
+                  }}
+                  placeholder="清单名称"
+                  className="flex-1 bg-white border border-[#1890FF] rounded px-2 py-1 text-sm outline-none"
+                />
+                <button 
+                  onClick={handleCreateList}
+                  className="p-1 text-[#1890FF] hover:bg-blue-50 rounded"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
             {customLists.map((list) => (
               <button
                 key={list.id}

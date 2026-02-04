@@ -17,10 +17,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface DatePickerProps {
     selectedDate?: number; // Unix timestamp
     onSelect: (timestamp: number | undefined) => void;
-    onClose: () => void;
 }
 
-export default function DatePicker({ selectedDate, onSelect, onClose }: DatePickerProps) {
+export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) {
     const [viewDate, setViewDate] = useState(
         selectedDate ? new Date(selectedDate * 1000) : new Date()
     );

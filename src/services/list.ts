@@ -70,7 +70,31 @@ function loadBrowserLists(): List[] {
       return initial;
     }
     const parsed = JSON.parse(raw) as List[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    
+    // 确保智能清单完整（例如：升级后新增了垃圾桶）
+    const smartTypes = [
+      SmartListType.Inbox,
+      SmartListType.Today,
+      SmartListType.Week,
+      SmartListType.All,
+      SmartListType.Completed,
+      SmartListType.Trash,
+    ];
+    
+    let updated = false;
+    smartTypes.forEach((type, index) => {
+      if (!parsed.find(l => l.id === type)) {
+        parsed.push(createSmartList(type, index));
+        updated = true;
+      }
+    });
+    
+    if (updated) {
+      saveBrowserLists(parsed);
+    }
+    
+    return parsed;
   } catch {
     return [];
   }
