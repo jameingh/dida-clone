@@ -59,6 +59,27 @@ impl Database {
             [],
         )?;
 
+        // 确保 is_smart 列存在 (简单迁移)
+        let _ = conn.execute("ALTER TABLE lists ADD COLUMN is_smart INTEGER NOT NULL DEFAULT 0", []);
+
+        // 强制修复：如果存在 order_num 为 0 的多个智能清单，可能导致排序混乱或丢失
+        // 我们可以根据 id 重新设置 order_num
+        let _ = conn.execute("UPDATE lists SET order_num = 0 WHERE id = 'smart_inbox'", []);
+        let _ = conn.execute("UPDATE lists SET order_num = 1 WHERE id = 'smart_today'", []);
+        let _ = conn.execute("UPDATE lists SET order_num = 2 WHERE id = 'smart_week'", []);
+        let _ = conn.execute("UPDATE lists SET order_num = 3 WHERE id = 'smart_all'", []);
+        let _ = conn.execute("UPDATE lists SET order_num = 4 WHERE id = 'smart_completed'", []);
+        let _ = conn.execute("UPDATE lists SET order_num = 5 WHERE id = 'smart_trash'", []);
+
+        // 彻底解决：如果仍然没有垃圾桶，可能是因为 INSERT OR REPLACE 失败或被其他逻辑覆盖
+        // 我们直接执行一个显式的插入，并打印受影响的行数
+        let rows = conn.execute(
+            "INSERT OR REPLACE INTO lists (id, name, icon, color, is_smart, order_num, created_at)
+             VALUES ('smart_trash', '垃圾桶', '🗑️', '#3B82F6', 1, 5, ?1)",
+            rusqlite::params![chrono::Utc::now().timestamp()],
+        )?;
+        println!("Rust: Force inserted smart_trash, rows affected: {}", rows);
+
         // 创建标签表
         conn.execute(
             "CREATE TABLE IF NOT EXISTS tags (
@@ -107,6 +128,50 @@ impl Database {
             "CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed)",
             [],
         )?;
+
+        // 初始化智能清单
+        self.init_smart_lists(&conn)?;
+
+        Ok(())
+    }
+
+    fn init_smart_lists(&self, conn: &Connection) -> Result<()> {
+        use crate::models::{List, SmartListType};
+        
+        let smart_types = vec![
+            SmartListType::Inbox,
+            SmartListType::Today,
+            SmartListType::Week,
+            SmartListType::All,
+            SmartListType::Completed,
+            SmartListType::Trash,
+        ];
+
+        let now = chrono::Utc::now().timestamp();
+
+        for (index, list_type) in smart_types.into_iter().enumerate() {
+            let list = List::new_smart(list_type);
+            println!("Initializing smart list: {} (id: {})", list.name, list.id);
+            conn.execute(
+                "INSERT OR REPLACE INTO lists (id, name, icon, color, is_smart, order_num, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                rusqlite::params![list.id, list.name, list.icon, list.color, 1, index as i32, now],
+            )?;
+        }
+
+        // 验证插入结果
+        let mut stmt = conn.prepare("SELECT id, name FROM lists WHERE is_smart = 1")?;
+        let rows = stmt.query_map([], |row| {
+            let id: String = row.get(0)?;
+            let name: String = row.get(1)?;
+            Ok((id, name))
+        })?;
+
+        println!("Smart lists in database after init:");
+        for row in rows {
+            let (id, name) = row?;
+            println!("  - {}: {}", id, name);
+        }
 
         Ok(())
     }

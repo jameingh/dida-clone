@@ -137,6 +137,20 @@ export default function Sidebar() {
   const isLoading = isListsLoading || isTagsLoading;
   const isInitialLoading = isLoading && !lists && !tags;
 
+  const smartLists = useMemo(() => {
+    const filtered = (lists || []).filter((list) => list.is_smart);
+    console.log('Sidebar render - lists:', lists);
+    console.log('Sidebar render - smartLists count:', filtered.length);
+    console.log('Sidebar render - smartLists IDs:', filtered.map(l => l.id));
+    return filtered;
+  }, [lists]);
+
+  const customLists = useMemo(() => lists?.filter((list) => !list.is_smart) || [], [lists]);
+  const pinnedTags = useMemo(() => tags?.filter((tag) => tag.is_pinned) || [], [tags]);
+
+  // 如果后端没有返回任何清单（包括智能清单），可能是还在加载或初始化
+  const hasSmartLists = smartLists.length > 0;
+
   // 只在首次进入应用时显示“加载中”，后续切换保持界面内容不闪烁
   if (isInitialLoading) {
     return (
@@ -145,10 +159,6 @@ export default function Sidebar() {
       </aside>
     );
   }
-
-  const smartLists = lists?.filter((list) => list.is_smart) || [];
-  const customLists = lists?.filter((list) => !list.is_smart) || [];
-  const pinnedTags = tags?.filter((tag) => tag.is_pinned) || [];
 
   return (
     <aside className="w-60 bg-[#FAFAFA] border-r border-gray-200 flex flex-col pt-4 overflow-y-auto">
@@ -181,23 +191,29 @@ export default function Sidebar() {
 
         {/* 智能清单 */}
         <div className="mb-2 space-y-0.5">
-          {smartLists.map((list) => (
-            <button
-              key={list.id}
-              onClick={() => setSelectedListId(list.id)}
-              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md transition-colors group ${selectedListId === list.id
-                ? 'bg-[#E6F7FF] text-[#1890FF]'
-                : 'text-gray-700 hover:bg-gray-200'
-                }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-lg w-5 h-5 flex items-center justify-center">{list.icon}</span>
-                <span className={`text-sm ${selectedListId === list.id ? 'font-semibold' : 'font-medium'}`}>
-                  {list.name}
-                </span>
-              </div>
-            </button>
-          ))}
+          {!hasSmartLists && !isListsLoading && (
+            <div className="px-3 py-2 text-xs text-gray-400 italic">初始化清单中...</div>
+          )}
+          {smartLists.map((list) => {
+            console.log('Sidebar - Rendering smart list item:', JSON.stringify(list));
+            return (
+              <button
+                key={list.id}
+                onClick={() => setSelectedListId(list.id)}
+                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md transition-colors group ${selectedListId === list.id
+                  ? 'bg-[#E6F7FF] text-[#1890FF]'
+                  : 'text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg w-5 h-5 flex items-center justify-center">{list.icon}</span>
+                  <span className={`text-sm ${selectedListId === list.id ? 'font-semibold' : 'font-medium'}`}>
+                    {list.name}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* 自定义清单 */}

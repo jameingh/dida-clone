@@ -51,25 +51,7 @@ impl TaskRepository {
              FROM tasks WHERE id = ?1"
         )?;
 
-        let task = stmt.query_row(params![task_id], |row| {
-            Ok(Task {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                description: row.get(2)?,
-                list_id: row.get(3)?,
-                completed: row.get::<_, i32>(4)? != 0,
-                priority: Priority::from_i32(row.get(5)?),
-                due_date: row.get(6)?,
-                reminder: row.get(7)?,
-                parent_id: row.get(8)?,
-                order: row.get(9)?,
-                is_deleted: row.get::<_, i32>(10)? != 0,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
-                completed_at: row.get(13)?,
-                tags: Vec::new(), // 稍后加载
-            })
-        })?;
+        let task = stmt.query_row(params![task_id], Self::map_row)?;
 
         // 加载标签
         let tags = Self::get_task_tags(&conn, task_id)?;
@@ -85,26 +67,8 @@ impl TaskRepository {
              FROM tasks WHERE is_deleted = 0 ORDER BY order_num ASC, created_at DESC"
         )?;
 
-        let tasks = stmt.query_map([], |row| {
-            Ok(Task {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                description: row.get(2)?,
-                list_id: row.get(3)?,
-                completed: row.get::<_, i32>(4)? != 0,
-                priority: Priority::from_i32(row.get(5)?),
-                due_date: row.get(6)?,
-                reminder: row.get(7)?,
-                parent_id: row.get(8)?,
-                order: row.get(9)?,
-                is_deleted: row.get::<_, i32>(10)? != 0,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
-                completed_at: row.get(13)?,
-                tags: Vec::new(),
-            })
-        })?
-        .collect::<rusqlite::Result<Vec<Task>>>()?;
+        let tasks = stmt.query_map([], Self::map_row)?
+            .collect::<rusqlite::Result<Vec<Task>>>()?;
 
         // 为每个任务加载标签
         let mut tasks_with_tags = Vec::new();
@@ -119,44 +83,86 @@ impl TaskRepository {
     pub fn get_by_list(db: &Database, list_id: &str) -> Result<Vec<Task>> {
         let conn = db.conn.lock().unwrap();
         
-        let query = if list_id == "smart_trash" {
-            "SELECT id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
-             FROM tasks WHERE is_deleted = 1 ORDER BY updated_at DESC"
-        } else {
-            "SELECT id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
-             FROM tasks WHERE list_id = ?1 AND is_deleted = 0 ORDER BY order_num ASC, created_at DESC"
+        let (query, has_params) = match list_id {
+            "smart_trash" => (
+                "SELECT id, title, description, list_id, completed, priority, 
+                 due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                 FROM tasks WHERE is_deleted = 1 ORDER BY updated_at DESC",
+                false
+            ),
+            "smart_completed" => (
+                "SELECT id, title, description, list_id, completed, priority, 
+                 due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                 FROM tasks WHERE completed = 1 AND is_deleted = 0 ORDER BY completed_at DESC, updated_at DESC",
+                false
+            ),
+            "smart_all" => (
+                "SELECT id, title, description, list_id, completed, priority, 
+                 due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                 FROM tasks WHERE is_deleted = 0 ORDER BY order_num ASC, created_at DESC",
+                false
+            ),
+            "smart_today" => {
+                let now = chrono::Local::now();
+                let today_start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_local_timezone(chrono::Local).unwrap().timestamp();
+                let today_end = now.date_naive().and_hms_opt(23, 59, 59).unwrap().and_local_timezone(chrono::Local).unwrap().timestamp();
+                
+                let mut stmt = conn.prepare(
+                    "SELECT id, title, description, list_id, completed, priority, 
+                     due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                     FROM tasks 
+                     WHERE (due_date <= ?1 AND is_deleted = 0 AND completed = 0)
+                        OR (completed_at >= ?2 AND completed_at <= ?1 AND is_deleted = 0 AND completed = 1)
+                     ORDER BY completed ASC, due_date ASC, priority DESC"
+                )?;
+                
+                let tasks = stmt.query_map(params![today_end, today_start], Self::map_row)?
+                    .collect::<rusqlite::Result<Vec<Task>>>()?;
+                
+                let mut tasks_with_tags = Vec::new();
+                for task in tasks {
+                    let tags = Self::get_task_tags(&conn, &task.id)?;
+                    tasks_with_tags.push(Task { tags, ..task });
+                }
+                return Ok(tasks_with_tags);
+            },
+            "smart_week" => {
+                let now = chrono::Local::now();
+                let week_end = (now + chrono::Duration::days(7)).date_naive().and_hms_opt(23, 59, 59).unwrap().and_local_timezone(chrono::Local).unwrap().timestamp();
+                
+                let mut stmt = conn.prepare(
+                    "SELECT id, title, description, list_id, completed, priority, 
+                     due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                     FROM tasks WHERE due_date <= ?1 AND is_deleted = 0 ORDER BY due_date ASC, priority DESC"
+                )?;
+                
+                let tasks = stmt.query_map(params![week_end], Self::map_row)?
+                    .collect::<rusqlite::Result<Vec<Task>>>()?;
+                
+                let mut tasks_with_tags = Vec::new();
+                for task in tasks {
+                    let tags = Self::get_task_tags(&conn, &task.id)?;
+                    tasks_with_tags.push(Task { tags, ..task });
+                }
+                return Ok(tasks_with_tags);
+            },
+            _ => (
+                "SELECT id, title, description, list_id, completed, priority, 
+                 due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                 FROM tasks WHERE list_id = ?1 AND is_deleted = 0 ORDER BY order_num ASC, created_at DESC",
+                true
+            ),
         };
 
         let mut stmt = conn.prepare(query)?;
 
-        let params_vec = if list_id == "smart_trash" {
-            params![]
+        let tasks = if has_params {
+            stmt.query_map(params![list_id], Self::map_row)?
+                .collect::<rusqlite::Result<Vec<Task>>>()?
         } else {
-            params![list_id]
+            stmt.query_map([], Self::map_row)?
+                .collect::<rusqlite::Result<Vec<Task>>>()?
         };
-
-        let tasks = stmt.query_map(params_vec, |row| {
-            Ok(Task {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                description: row.get(2)?,
-                list_id: row.get(3)?,
-                completed: row.get::<_, i32>(4)? != 0,
-                priority: Priority::from_i32(row.get(5)?),
-                due_date: row.get(6)?,
-                reminder: row.get(7)?,
-                parent_id: row.get(8)?,
-                order: row.get(9)?,
-                is_deleted: row.get::<_, i32>(10)? != 0,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
-                completed_at: row.get(13)?,
-                tags: Vec::new(),
-            })
-        })?
-        .collect::<rusqlite::Result<Vec<Task>>>()?;
 
         let mut tasks_with_tags = Vec::new();
         for task in tasks {
@@ -179,26 +185,8 @@ impl TaskRepository {
              ORDER BY t.order_num ASC, t.created_at DESC"
         )?;
 
-        let tasks = stmt.query_map(params![tag_id], |row| {
-            Ok(Task {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                description: row.get(2)?,
-                list_id: row.get(3)?,
-                completed: row.get::<_, i32>(4)? != 0,
-                priority: Priority::from_i32(row.get(5)?),
-                due_date: row.get(6)?,
-                reminder: row.get(7)?,
-                parent_id: row.get(8)?,
-                order: row.get(9)?,
-                is_deleted: row.get::<_, i32>(10)? != 0,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
-                completed_at: row.get(13)?,
-                tags: Vec::new(),
-            })
-        })?
-        .collect::<rusqlite::Result<Vec<Task>>>()?;
+        let tasks = stmt.query_map(params![tag_id], Self::map_row)?
+            .collect::<rusqlite::Result<Vec<Task>>>()?;
 
         let mut tasks_with_tags = Vec::new();
         for task in tasks {
@@ -218,26 +206,8 @@ impl TaskRepository {
              FROM tasks WHERE parent_id = ?1 AND is_deleted = 0 ORDER BY order_num ASC, created_at DESC"
         )?;
 
-        let tasks = stmt.query_map(params![parent_id], |row| {
-            Ok(Task {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                description: row.get(2)?,
-                list_id: row.get(3)?,
-                completed: row.get::<_, i32>(4)? != 0,
-                priority: Priority::from_i32(row.get(5)?),
-                due_date: row.get(6)?,
-                reminder: row.get(7)?,
-                parent_id: row.get(8)?,
-                order: row.get(9)?,
-                is_deleted: row.get::<_, i32>(10)? != 0,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
-                completed_at: row.get(13)?,
-                tags: Vec::new(),
-            })
-        })?
-        .collect::<rusqlite::Result<Vec<Task>>>()?;
+        let tasks = stmt.query_map(params![parent_id], Self::map_row)?
+            .collect::<rusqlite::Result<Vec<Task>>>()?;
 
         let mut tasks_with_tags = Vec::new();
         for task in tasks {
@@ -351,14 +321,30 @@ impl TaskRepository {
         Ok(())
     }
 
-    fn get_task_tags(conn: &rusqlite::Connection, task_id: &str) -> rusqlite::Result<Vec<String>> {
-        let mut stmt = conn.prepare(
-            "SELECT tag_id FROM task_tags WHERE task_id = ?1"
-        )?;
-
+    fn get_task_tags(conn: &rusqlite::Connection, task_id: &str) -> Result<Vec<String>> {
+        let mut stmt = conn.prepare("SELECT tag_id FROM task_tags WHERE task_id = ?1")?;
         let tags = stmt.query_map(params![task_id], |row| row.get(0))?
             .collect::<rusqlite::Result<Vec<String>>>()?;
-
         Ok(tags)
+    }
+
+    fn map_row(row: &rusqlite::Row) -> rusqlite::Result<Task> {
+        Ok(Task {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            description: row.get(2)?,
+            list_id: row.get(3)?,
+            completed: row.get::<_, i32>(4)? != 0,
+            priority: Priority::from_i32(row.get(5)?),
+            due_date: row.get(6)?,
+            reminder: row.get(7)?,
+            parent_id: row.get(8)?,
+            order: row.get(9)?,
+            is_deleted: row.get::<_, i32>(10)? != 0,
+            created_at: row.get(11)?,
+            updated_at: row.get(12)?,
+            completed_at: row.get(13)?,
+            tags: Vec::new(),
+        })
     }
 }

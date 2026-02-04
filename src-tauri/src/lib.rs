@@ -25,9 +25,6 @@ pub fn run() {
             let db_path = app_data_dir.join("dida.db");
             let db = Database::new(db_path).expect("Failed to initialize database");
             
-            // 初始化默认数据
-            init_default_data(&db)?;
-            
             // 设置应用状态
             let state = AppState::new(db);
             app.manage(state);
@@ -65,32 +62,4 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
-
-fn init_default_data(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::db::ListRepository;
-    use crate::models::SmartListType;
-    
-    // 检查是否已有清单
-    let lists = ListRepository::get_all(db)?;
-    if !lists.is_empty() {
-        return Ok(());
-    }
-    
-    // 创建默认智能清单
-    let smart_lists = vec![
-        models::List::new_smart(SmartListType::Inbox),
-        models::List::new_smart(SmartListType::Today),
-        models::List::new_smart(SmartListType::Week),
-        models::List::new_smart(SmartListType::All),
-        models::List::new_smart(SmartListType::Completed),
-        models::List::new_smart(SmartListType::Trash),
-    ];
-    
-    for (index, mut list) in smart_lists.into_iter().enumerate() {
-        list.order = index as i32;
-        ListRepository::create(db, &list)?;
-    }
-    
-    Ok(())
 }

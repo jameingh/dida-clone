@@ -57,7 +57,7 @@ impl ListRepository {
              FROM lists ORDER BY order_num ASC, created_at ASC"
         )?;
 
-        let lists = stmt.query_map([], |row| {
+        let lists_iter = stmt.query_map([], |row| {
             Ok(List {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -67,8 +67,17 @@ impl ListRepository {
                 order: row.get(5)?,
                 created_at: row.get(6)?,
             })
-        })?
-        .collect::<rusqlite::Result<Vec<List>>>()?;
+        })?;
+
+        let mut lists = Vec::new();
+        for list in lists_iter {
+            lists.push(list?);
+        }
+
+        println!("Rust: ListRepository::get_all found {} lists", lists.len());
+        for l in &lists {
+            println!("  - ID: {}, Name: {}, IsSmart: {}", l.id, l.name, l.is_smart);
+        }
 
         Ok(lists)
     }

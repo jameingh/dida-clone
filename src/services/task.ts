@@ -50,9 +50,40 @@ function createBrowserTaskBase(partial: Partial<Task> & Pick<Task, 'title' | 'li
 const browserTaskStore = {
   async getTasks(listId?: string): Promise<Task[]> {
     const tasks = loadBrowserTasks();
+    
     if (listId === 'smart_trash') {
-      return tasks.filter(t => t.is_deleted);
+      return tasks.filter(t => t.is_deleted).sort((a, b) => b.updated_at - a.updated_at);
     }
+    
+    if (listId === 'smart_completed') {
+      return tasks.filter(t => !t.is_deleted && t.completed).sort((a, b) => (b.completed_at || 0) - (a.completed_at || 0));
+    }
+
+    if (listId === 'smart_today') {
+      const now = new Date();
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(now);
+      todayEnd.setHours(23, 59, 59, 999);
+      
+      const startTs = Math.floor(todayStart.getTime() / 1000);
+      const endTs = Math.floor(todayEnd.getTime() / 1000);
+      
+      return tasks.filter(t => 
+        !t.is_deleted && (
+          (!t.completed && t.due_date !== null && t.due_date <= endTs) ||
+          (t.completed && t.completed_at !== null && t.completed_at >= startTs && t.completed_at <= endTs)
+        )
+      ).sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        return (a.due_date || 0) - (b.due_date || 0);
+      });
+    }
+
+    if (listId === 'smart_all') {
+      return tasks.filter(t => !t.is_deleted).sort((a, b) => a.order - b.order);
+    }
+
     const filtered = tasks.filter(t => !t.is_deleted);
     if (!listId) return filtered;
     return filtered.filter(t => t.list_id === listId);

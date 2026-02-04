@@ -161,7 +161,7 @@ export default function TaskList() {
 
       createTask.mutate({
         title: title,
-        listId: selectedListId,
+        listId: listId,
         dueDate: newTaskDueDate,
         priority: newTaskPriority,
         tags: Array.from(tagsToAssign),
@@ -231,7 +231,10 @@ export default function TaskList() {
   const incompleteTasks = localTasks.filter((task) => !task.completed);
   const completedTasks = localTasks.filter((task) => task.completed);
   const isTrashView = selectedListId === 'smart_trash';
-  // 已选属性是否存在的标记
+  const isCompletedView = selectedListId === 'smart_completed';
+  const hideInput = isTrashView || isCompletedView;
+
+  // 辅助函数：根据优先级获取颜色已选属性是否存在的标记
   const hasAttributes = newTaskDueDate || newTaskPriority !== undefined || newTaskTags.length > 0;
 
   const handleEmptyTrash = () => {
@@ -306,8 +309,8 @@ export default function TaskList() {
         </div>
       )}
 
-      {/* 顶部快速添加栏 - 垃圾桶视图下隐藏 */}
-      {!isTrashView && (
+      {/* 顶部快速添加栏 - 垃圾桶和已完成视图下隐藏 */}
+      {!hideInput && (
         <div className="px-4 py-3 shrink-0">
           <form onSubmit={handleAddTask} className="relative">
             <div className={`flex flex-col bg-[#F5F5F5] focus-within:bg-white border border-transparent focus-within:border-gray-200 rounded transition-all group ${hasAttributes ? 'pb-2' : ''}`}>
@@ -352,6 +355,7 @@ export default function TaskList() {
                                   onClick={() => {
                                     setNewTaskPriority(p === 0 ? undefined : p);
                                     setShowMoreMenu(false);
+                                    setTimeout(() => inputRef.current?.focus(), 0);
                                   }}
                                   className={`flex-1 flex items-center justify-center py-1.5 rounded text-sm hover:bg-gray-50 border transition-all ${isSelected ? 'border-[#1890FF] bg-blue-50' : 'border-transparent'}`}
                                 >
@@ -375,7 +379,10 @@ export default function TaskList() {
                                   key={tag.id}
                                   type="button"
                                   aria-label={'选择标签 ' + tag.name}
-                                  onClick={() => toggleTag(tag.id)}
+                                  onClick={() => {
+                                    toggleTag(tag.id);
+                                    setTimeout(() => inputRef.current?.focus(), 0);
+                                  }}
                                   className={`px-2 py-1 text-xs rounded border transition-colors flex items-center gap-1 ${isSelected ? 'bg-blue-50 text-[#1890FF] border-[#1890FF]' : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'}`}
                                 >
                                   {isSelected && <Check className="w-3 h-3" />}
@@ -417,8 +424,12 @@ export default function TaskList() {
                           onSelect={(timestamp) => {
                             setNewTaskDueDate(timestamp);
                             setShowDatePicker(false);
+                            setTimeout(() => inputRef.current?.focus(), 0);
                           }}
-                          onClose={() => setShowDatePicker(false)}
+                          onClose={() => {
+                            setShowDatePicker(false);
+                            setTimeout(() => inputRef.current?.focus(), 0);
+                          }}
                         />
                       </div>
                     )}
@@ -436,7 +447,10 @@ export default function TaskList() {
                       {getPriorityLabel(newTaskPriority)}
                       <button
                         type="button"
-                        onClick={() => setNewTaskPriority(undefined)}
+                        onClick={() => {
+                          setNewTaskPriority(undefined);
+                          setTimeout(() => inputRef.current?.focus(), 0);
+                        }}
                         className="ml-1 hover:text-gray-700"
                       >
                         <X className="w-3 h-3" />
@@ -454,7 +468,10 @@ export default function TaskList() {
                         {tag.name}
                         <button
                           type="button"
-                          onClick={() => toggleTag(tagId)}
+                          onClick={() => {
+                            toggleTag(tagId);
+                            setTimeout(() => inputRef.current?.focus(), 0);
+                          }}
                           className="ml-1 hover:text-blue-700"
                         >
                           <X className="w-3 h-3" />
