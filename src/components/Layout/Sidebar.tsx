@@ -163,22 +163,6 @@ export default function Sidebar() {
             )}
           </div>
         </div>
-
-        {/* 垃圾桶 - 独立项 */}
-        <div className="mt-auto mb-4">
-          <button
-            onClick={() => setSelectedListId('smart_trash')}
-            className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md transition-colors group ${selectedListId === 'smart_trash'
-              ? 'bg-[#E6F7FF] text-[#1890FF]'
-              : 'text-gray-700 hover:bg-gray-200'
-              }`}
-          >
-            <div className="flex items-center gap-3">
-              <Trash2 className={`w-4 h-4 ${selectedListId === 'smart_trash' ? 'text-[#1890FF]' : 'text-gray-400'}`} />
-              <span className={`text-sm ${selectedListId === 'smart_trash' ? 'font-semibold' : 'font-medium'}`}>垃圾桶</span>
-            </div>
-          </button>
-        </div>
       </div>
     </aside>
   );

@@ -41,6 +41,25 @@ export default function TaskDetail() {
   const tagPopoverRef = useRef<HTMLDivElement>(null);
   const tagTriggerRef = useRef<HTMLDivElement>(null);
 
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState('');
+
+  useEffect(() => {
+    if (task) {
+      setEditTitleValue(task.title);
+    }
+  }, [task]);
+
+  const handleTitleSave = () => {
+    if (task && editTitleValue.trim() && editTitleValue.trim() !== task.title) {
+      updateTask.mutate({
+        ...task,
+        title: editTitleValue.trim()
+      });
+    }
+    setIsEditingTitle(false);
+  };
+
   // 点击外部关闭标签 Popover
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -186,7 +205,30 @@ export default function TaskDetail() {
       <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
         {/* 标题 */}
         <div>
-          <h3 className={`text-[18px] font-bold text-gray-800 leading-snug ${isTrashView ? 'text-gray-400' : ''}`}>{task.title}</h3>
+          {isEditingTitle && !isTrashView ? (
+            <input
+              autoFocus
+              type="text"
+              value={editTitleValue}
+              onChange={(e) => setEditTitleValue(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
+              className="w-full text-[18px] font-bold text-gray-800 leading-snug outline-none border-b-2 border-[#1890FF] pb-1 bg-transparent"
+            />
+          ) : (
+            <h3 
+              onClick={() => {
+                if (!isTrashView) {
+                  setEditTitleValue(task.title);
+                  setIsEditingTitle(true);
+                }
+              }}
+              className={`text-[18px] font-bold text-gray-800 leading-snug ${isTrashView ? 'text-gray-400 cursor-default' : 'cursor-text hover:bg-gray-50 -mx-1 px-1 rounded transition-colors'}`}
+              title={isTrashView ? '' : "点击修改标题"}
+            >
+              {task.title}
+            </h3>
+          )}
         </div>
 
         {/* 垃圾桶视图下的操作按钮 */}

@@ -15,7 +15,8 @@ import {
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { Plus, Calendar, ChevronDown, MoreHorizontal, Flag, Hash, X, Check, Trash2 } from 'lucide-react';
 import { useTasks, useCreateTaskExtended, useUpdateTaskOrders, useEmptyTrash } from '../../hooks/useTasks';
-import { useTags } from '../../hooks/useTags';
+import { useTags, useCreateTag, useUpdateTag } from '../../hooks/useTags';
+import { useLists } from '../../hooks/useLists';
 import { Task } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
@@ -26,7 +27,10 @@ export default function TaskList() {
   const { selectedListId, selectedTagId } = useAppStore();
   const { data: tasks } = useTasks(selectedListId || undefined, selectedTagId || undefined);
   const { data: allTags } = useTags();
+  const { data: lists } = useLists();
   const createTask = useCreateTaskExtended();
+  const createTag = useCreateTag();
+  const updateTag = useUpdateTag();
   const updateTaskOrders = useUpdateTaskOrders();
   const emptyTrash = useEmptyTrash();
   const { showAlert } = useAlertStore();
@@ -35,6 +39,30 @@ export default function TaskList() {
   const [newTaskDueDate, setNewTaskDueDate] = useState<number | undefined>();
   const [newTaskPriority, setNewTaskPriority] = useState<number | undefined>();
   const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
+
+  // 标题编辑状态
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleInputValue, setTitleInputValue] = useState('');
+  
+  // 当切换标签时，重置标题输入框
+  useEffect(() => {
+    if (selectedTagId && allTags) {
+      const tag = allTags.find(t => t.id === selectedTagId);
+      if (tag) {
+        setTitleInputValue(tag.name);
+      }
+    }
+  }, [selectedTagId, allTags]);
+
+  const handleTitleSave = () => {
+    if (selectedTagId && allTags && titleInputValue.trim()) {
+      const tag = allTags.find(t => t.id === selectedTagId);
+      if (tag && tag.name !== titleInputValue.trim()) {
+        updateTag.mutate({ ...tag, name: titleInputValue.trim() });
+      }
+    }
+    setIsEditingTitle(false);
+  };
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -88,15 +116,50 @@ export default function TaskList() {
     return `${month}月${day}日, ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
 
-  const handleAddTask = (e: React.FormEvent) => {
+  const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newTaskTitle.trim() && selectedListId) {
+      let title = newTaskTitle.trim();
+      const tagsToAssign = new Set(newTaskTags);
+
+      // 解析标题中的标签 (例如 "#工作")
+      const tagMatches = title.match(/#(\S+)/g);
+      if (tagMatches) {
+        for (const match of tagMatches) {
+          const tagName = match.substring(1); // 移除 #
+          // 查找现有标签
+          const existingTag = allTags?.find(t => t.name === tagName);
+          
+          if (existingTag) {
+            tagsToAssign.add(existingTag.id);
+          } else {
+            // 创建新标签
+            try {
+               const newTag = await createTag.mutateAsync({ name: tagName, color: '#87d068' });
+               tagsToAssign.add(newTag.id);
+            } catch (error) {
+               console.error('Failed to create tag:', error);
+            }
+          }
+          
+          // 从标题中移除标签文本
+          title = title.replace(match, '').trim();
+        }
+      }
+
+      // 如果移除标签后标题为空，恢复原标题（或者根据需求保留空标题但通常不允许）
+      // 这里如果只输入了 #tag，可能标题就为空了。滴答清单允许这种情况吗？通常需要一个标题。
+      // 如果为空，我们保留原标题，但仍然关联标签。
+      if (!title) {
+        title = newTaskTitle.trim();
+      }
+
       createTask.mutate({
-        title: newTaskTitle.trim(),
+        title: title,
         listId: selectedListId,
         dueDate: newTaskDueDate,
         priority: newTaskPriority,
-        tags: newTaskTags,
+        tags: Array.from(tagsToAssign),
         description: undefined,
       });
       setNewTaskTitle('');
@@ -178,8 +241,50 @@ export default function TaskList() {
     });
   };
 
+  // 计算当前视图标题
+  let viewTitle = '';
+  if (selectedTagId && allTags) {
+    const tag = allTags.find(t => t.id === selectedTagId);
+    if (tag) viewTitle = tag.name;
+  } else if (selectedListId && lists) {
+    const list = lists.find(l => l.id === selectedListId);
+    if (list) viewTitle = list.name;
+  }
+
   return (
     <div className="h-full flex flex-col bg-white">
+      {/* 顶部标题栏 */}
+      <div className="px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          {selectedTagId ? (
+            isEditingTitle ? (
+              <input
+                autoFocus
+                type="text"
+                value={titleInputValue}
+                onChange={(e) => setTitleInputValue(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
+                className="text-2xl font-bold text-gray-800 outline-none border-b-2 border-[#1890FF] pb-1 bg-transparent"
+              />
+            ) : (
+              <h1
+                onClick={() => {
+                  setTitleInputValue(viewTitle);
+                  setIsEditingTitle(true);
+                }}
+                className="text-2xl font-bold text-gray-800 cursor-text hover:bg-gray-50 px-1 -mx-1 rounded transition-colors"
+                title="点击修改标签名称"
+              >
+                # {viewTitle}
+              </h1>
+            )
+          ) : (
+            <h1 className="text-2xl font-bold text-gray-800">{viewTitle}</h1>
+          )}
+        </div>
+      </div>
+
       {/* 垃圾桶顶部操作栏 */}
       {isTrashView && localTasks.length > 0 && (
         <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
@@ -209,7 +314,7 @@ export default function TaskList() {
                   type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  placeholder="添加任务..."
+                  placeholder="添加任务... (输入 #添加标签)"
                   className="flex-1 bg-transparent text-[14px] text-gray-700 outline-none placeholder:text-gray-400"
                 />
 
