@@ -205,6 +205,7 @@ export default function TaskList() {
                               <button
                                 key={p}
                                 type="button"
+                                aria-label={p === 0 ? '无优先级' : getPriorityLabel(p) + '优先级'}
                                 onClick={() => {
                                   setNewTaskPriority(p === 0 ? undefined : p);
                                   setShowMoreMenu(false);
@@ -230,6 +231,7 @@ export default function TaskList() {
                               <button
                                 key={tag.id}
                                 type="button"
+                                aria-label={'选择标签 ' + tag.name}
                                 onClick={() => toggleTag(tag.id)}
                                 className={`px-2 py-1 text-xs rounded border transition-colors flex items-center gap-1 ${isSelected ? 'bg-blue-50 text-[#1890FF] border-[#1890FF]' : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'}`}
                               >
