@@ -128,15 +128,19 @@ impl TaskRepository {
             },
             "smart_week" => {
                 let now = chrono::Local::now();
+                let today_start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_local_timezone(chrono::Local).unwrap().timestamp();
                 let week_end = (now + chrono::Duration::days(7)).date_naive().and_hms_opt(23, 59, 59).unwrap().and_local_timezone(chrono::Local).unwrap().timestamp();
                 
                 let mut stmt = conn.prepare(
                     "SELECT id, title, description, list_id, completed, priority, 
                      due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
-                     FROM tasks WHERE due_date <= ?1 AND is_deleted = 0 ORDER BY due_date ASC, priority DESC"
+                     FROM tasks 
+                     WHERE (due_date <= ?1 AND is_deleted = 0 AND completed = 0)
+                        OR (completed_at >= ?2 AND completed_at <= ?1 AND is_deleted = 0 AND completed = 1)
+                     ORDER BY completed ASC, due_date ASC, priority DESC"
                 )?;
                 
-                let tasks = stmt.query_map(params![week_end], Self::map_row)?
+                let tasks = stmt.query_map(params![week_end, today_start], Self::map_row)?
                     .collect::<rusqlite::Result<Vec<Task>>>()?;
                 
                 let mut tasks_with_tags = Vec::new();

@@ -80,6 +80,28 @@ const browserTaskStore = {
       });
     }
 
+    if (listId === 'smart_week') {
+      const now = new Date();
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(now);
+      weekEnd.setDate(now.getDate() + 7);
+      weekEnd.setHours(23, 59, 59, 999);
+      
+      const startTs = Math.floor(todayStart.getTime() / 1000);
+      const endTs = Math.floor(weekEnd.getTime() / 1000);
+      
+      return tasks.filter(t => 
+        !t.is_deleted && (
+          (!t.completed && t.due_date !== null && t.due_date <= endTs) ||
+          (t.completed && t.completed_at !== null && t.completed_at >= startTs && t.completed_at <= endTs)
+        )
+      ).sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        return (a.due_date || 0) - (b.due_date || 0);
+      });
+    }
+
     if (listId === 'smart_all') {
       return tasks.filter(t => !t.is_deleted).sort((a, b) => a.order - b.order);
     }
