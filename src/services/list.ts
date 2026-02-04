@@ -33,6 +33,10 @@ function createSmartList(type: SmartListType, order: number): List {
       name = '已完成';
       icon = '✅';
       break;
+    case SmartListType.Trash:
+      name = '垃圾桶';
+      icon = '🗑️';
+      break;
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -60,6 +64,7 @@ function loadBrowserLists(): List[] {
         createSmartList(SmartListType.Week, 2),
         createSmartList(SmartListType.All, 3),
         createSmartList(SmartListType.Completed, 4),
+        createSmartList(SmartListType.Trash, 5),
       ];
       localStorage.setItem(BROWSER_LISTS_KEY, JSON.stringify(initial));
       return initial;

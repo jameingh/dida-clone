@@ -1,7 +1,8 @@
-import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useUpdateTask } from '../../hooks/useTasks';
+import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useUpdateTask, useUndoDeleteTask, useDeleteTaskPermanently } from '../../hooks/useTasks';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash } from 'lucide-react';
+import { useAlertStore } from '../../store/useAlertStore';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2 } from 'lucide-react';
 import { Priority } from '../../types';
 import { useState, useEffect, useRef } from 'react';
 import SubtaskItem from './SubtaskItem';
@@ -22,14 +23,19 @@ import {
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
 export default function TaskDetail() {
-  const { selectedTaskId, setSelectedTaskId } = useAppStore();
+  const { selectedTaskId, setSelectedTaskId, selectedListId } = useAppStore();
+  const { showAlert } = useAlertStore();
   const { data: task, isLoading } = useTask(selectedTaskId || '');
   const { data: subtasks } = useSubtasks(selectedTaskId || '');
   const { data: allTags } = useTags();
   const createSubtask = useCreateSubtaskSimple();
   const updateTaskOrders = useUpdateTaskOrders();
   const updateTask = useUpdateTask();
+  const undoDeleteTask = useUndoDeleteTask();
+  const deleteTaskPermanently = useDeleteTaskPermanently();
   const [newSubtaskTitle, setNewTaskTitle] = useState('');
+
+  const isTrashView = selectedListId === 'smart_trash';
 
   const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
   const tagPopoverRef = useRef<HTMLDivElement>(null);
@@ -115,6 +121,28 @@ export default function TaskDetail() {
     });
   };
 
+  const handleRestore = () => {
+    if (task) {
+      undoDeleteTask.mutate(task.id);
+      setSelectedTaskId(null);
+    }
+  };
+
+  const handleDeletePermanently = () => {
+    if (task) {
+      showAlert({
+        title: '永久删除任务',
+        message: '确定要永久删除这个任务吗？此操作不可撤销。',
+        type: 'error',
+        confirmLabel: '删除',
+        onConfirm: () => {
+          deleteTaskPermanently.mutate(task.id);
+          setSelectedTaskId(null);
+        }
+      });
+    }
+  };
+
   if (!selectedTaskId) {
     return (
       <div className="w-96 border-l border-gray-200 bg-white flex items-center justify-center">
@@ -158,8 +186,28 @@ export default function TaskDetail() {
       <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
         {/* 标题 */}
         <div>
-          <h3 className="text-[18px] font-bold text-gray-800 leading-snug">{task.title}</h3>
+          <h3 className={`text-[18px] font-bold text-gray-800 leading-snug ${isTrashView ? 'text-gray-400' : ''}`}>{task.title}</h3>
         </div>
+
+        {/* 垃圾桶视图下的操作按钮 */}
+        {isTrashView && (
+          <div className="flex gap-2">
+            <button
+              onClick={handleRestore}
+              className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#1890FF] text-white rounded-md hover:bg-[#40a9ff] transition-colors text-[13px] font-medium shadow-sm"
+            >
+              <RotateCcw className="w-4 h-4" />
+              恢复任务
+            </button>
+            <button
+              onClick={handleDeletePermanently}
+              className="flex-1 flex items-center justify-center gap-2 py-2 border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors text-[13px] font-medium"
+            >
+              <Trash2 className="w-4 h-4" />
+              永久删除
+            </button>
+          </div>
+        )}
 
         {/* 描述区域 */}
         <div className="space-y-2">
@@ -198,20 +246,22 @@ export default function TaskDetail() {
             </SortableContext>
           </DndContext>
 
-          <form onSubmit={handleAddSubtask} className="flex items-center gap-2 py-1 px-2 group">
-            <Plus className="w-4 h-4 text-gray-300 group-hover:text-[#1890FF] transition-colors" />
-            <input
-              type="text"
-              value={newSubtaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              placeholder="添加子任务..."
-              className="flex-1 bg-transparent outline-none text-[13px] text-gray-700 placeholder:text-gray-300"
-            />
-          </form>
+          {!isTrashView && (
+            <form onSubmit={handleAddSubtask} className="flex items-center gap-2 py-1 px-2 group">
+              <Plus className="w-4 h-4 text-gray-300 group-hover:text-[#1890FF] transition-colors" />
+              <input
+                type="text"
+                value={newSubtaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="添加子任务..."
+                className="flex-1 bg-transparent outline-none text-[13px] text-gray-700 placeholder:text-gray-300"
+              />
+            </form>
+          )}
         </div>
 
         {/* 设置属性 (日期, 优先级, 标签) */}
-        <div className="pt-4 border-t border-gray-50 space-y-4 pb-8">
+        <div className={`pt-4 border-t border-gray-50 space-y-4 pb-8 ${isTrashView ? 'pointer-events-none opacity-60' : ''}`}>
           <div className="flex items-center justify-between text-[13px]">
             <div className="flex items-center gap-2 text-gray-400">
               <Calendar className="w-4 h-4" />

@@ -13,20 +13,23 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { Plus, Calendar, ChevronDown, MoreHorizontal, Flag, Hash, X, Check } from 'lucide-react';
-import { useTasks, useCreateTaskExtended, useUpdateTaskOrders } from '../../hooks/useTasks';
+import { Plus, Calendar, ChevronDown, MoreHorizontal, Flag, Hash, X, Check, Trash2 } from 'lucide-react';
+import { useTasks, useCreateTaskExtended, useUpdateTaskOrders, useEmptyTrash } from '../../hooks/useTasks';
 import { useTags } from '../../hooks/useTags';
 import { Task } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
+import { useAlertStore } from '../../store/useAlertStore';
 import TaskItem from './TaskItem';
 import DatePicker from '../Common/DatePicker';
 
 export default function TaskList() {
   const { selectedListId, selectedTagId } = useAppStore();
-  const { data: tasks, isLoading } = useTasks(selectedListId || undefined, selectedTagId || undefined);
+  const { data: tasks } = useTasks(selectedListId || undefined, selectedTagId || undefined);
   const { data: allTags } = useTags();
   const createTask = useCreateTaskExtended();
   const updateTaskOrders = useUpdateTaskOrders();
+  const emptyTrash = useEmptyTrash();
+  const { showAlert } = useAlertStore();
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState<number | undefined>();
@@ -141,7 +144,7 @@ export default function TaskList() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id || isTrashView) return;
 
     const oldIndex = localTasks.findIndex((t) => t.id === active.id);
     const newIndex = localTasks.findIndex((t) => t.id === over.id);
@@ -159,171 +162,202 @@ export default function TaskList() {
 
   const incompleteTasks = localTasks.filter((task) => !task.completed);
   const completedTasks = localTasks.filter((task) => task.completed);
+  const isTrashView = selectedListId === 'smart_trash';
   // 已选属性是否存在的标记
   const hasAttributes = newTaskDueDate || newTaskPriority !== undefined || newTaskTags.length > 0;
 
+  const handleEmptyTrash = () => {
+    showAlert({
+      title: '清空垃圾桶',
+      message: '确定要清空垃圾桶吗？所有任务都将永久删除。',
+      type: 'error',
+      confirmLabel: '清空',
+      onConfirm: () => {
+        emptyTrash.mutate();
+      }
+    });
+  };
+
   return (
     <div className="h-full flex flex-col bg-white">
-      {/* 顶部快速添加栏 */}
-      <div className="px-4 py-3 shrink-0">
-        <form onSubmit={handleAddTask} className="relative">
-          <div className={`flex flex-col bg-[#F5F5F5] focus-within:bg-white border border-transparent focus-within:border-gray-200 rounded transition-all group ${hasAttributes ? 'pb-2' : ''}`}>
-            {/* 输入区域 */}
-            <div className="flex items-center gap-2 px-3 py-2.5">
-              <Plus className={`w-5 h-5 transition-colors shrink-0 ${newTaskPriority ? getPriorityColor(newTaskPriority) : 'text-gray-400 group-focus-within:text-[#1890FF]'}`} />
-              <input
-                ref={inputRef}
-                type="text"
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder="添加任务..."
-                className="flex-1 bg-transparent text-[14px] text-gray-700 outline-none placeholder:text-gray-400"
-              />
+      {/* 垃圾桶顶部操作栏 */}
+      {isTrashView && localTasks.length > 0 && (
+        <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <div className="text-[12px] text-gray-400">
+            任务将在垃圾桶中保留 7 天
+          </div>
+          <button
+            onClick={handleEmptyTrash}
+            className="flex items-center gap-1.5 px-2 py-1 text-[12px] text-red-500 hover:bg-red-50 rounded transition-colors font-medium"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            清空垃圾桶
+          </button>
+        </div>
+      )}
 
-              {/* 右侧按钮组 */}
-              <div className="flex items-center gap-1">
-                {/* 更多按钮 */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowMoreMenu(!showMoreMenu)}
-                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
-                  >
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
+      {/* 顶部快速添加栏 - 垃圾桶视图下隐藏 */}
+      {!isTrashView && (
+        <div className="px-4 py-3 shrink-0">
+          <form onSubmit={handleAddTask} className="relative">
+            <div className={`flex flex-col bg-[#F5F5F5] focus-within:bg-white border border-transparent focus-within:border-gray-200 rounded transition-all group ${hasAttributes ? 'pb-2' : ''}`}>
+              {/* 输入区域 */}
+              <div className="flex items-center gap-2 px-3 py-2.5">
+                <Plus className={`w-5 h-5 transition-colors shrink-0 ${newTaskPriority ? getPriorityColor(newTaskPriority) : 'text-gray-400 group-focus-within:text-[#1890FF]'}`} />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="添加任务..."
+                  className="flex-1 bg-transparent text-[14px] text-gray-700 outline-none placeholder:text-gray-400"
+                />
 
-                  {/* 更多菜单浮层 */}
-                  {showMoreMenu && (
-                    <div ref={moreMenuRef} className="absolute top-full right-0 mt-2 w-64 bg-white shadow-xl rounded-lg border border-gray-100 p-3 z-50 animate-in fade-in zoom-in-95 duration-100">
-                      {/* 优先级选择 */}
-                      <div className="mb-3">
-                        <div className="text-xs font-medium text-gray-500 mb-2">优先级</div>
-                        <div className="flex gap-2">
-                          {[3, 2, 1, 0].map((p) => {
-                            const isSelected = newTaskPriority === (p === 0 ? undefined : p);
-                            return (
-                              <button
-                                key={p}
-                                type="button"
-                                aria-label={p === 0 ? '无优先级' : getPriorityLabel(p) + '优先级'}
-                                onClick={() => {
-                                  setNewTaskPriority(p === 0 ? undefined : p);
-                                  setShowMoreMenu(false);
-                                }}
-                                className={`flex-1 flex items-center justify-center py-1.5 rounded text-sm hover:bg-gray-50 border transition-all ${isSelected ? 'border-[#1890FF] bg-blue-50' : 'border-transparent'}`}
-                              >
-                                {p === 0 ? '无' : (
-                                  <Flag className={`w-4 h-4 ${getPriorityColor(p)}`} fill="currentColor" />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* 标签选择 */}
-                      <div>
-                        <div className="text-xs font-medium text-gray-500 mb-2">标签</div>
-                        <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                          {allTags?.map((tag) => {
-                            const isSelected = newTaskTags.includes(tag.id);
-                            return (
-                              <button
-                                key={tag.id}
-                                type="button"
-                                aria-label={'选择标签 ' + tag.name}
-                                onClick={() => toggleTag(tag.id)}
-                                className={`px-2 py-1 text-xs rounded border transition-colors flex items-center gap-1 ${isSelected ? 'bg-blue-50 text-[#1890FF] border-[#1890FF]' : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'}`}
-                              >
-                                {isSelected && <Check className="w-3 h-3" />}
-                                {tag.name}
-                              </button>
-                            );
-                          })}
-                          {(!allTags || allTags.length === 0) && (
-                            <div className="text-xs text-gray-400 w-full text-center py-2">暂无标签</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 日期按钮 */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowDatePicker(!showDatePicker)}
-                    className="flex items-center gap-1 px-2 py-1 text-[13px] text-gray-500 hover:text-[#1890FF] hover:bg-blue-50 rounded transition-colors shrink-0"
-                  >
-                    {newTaskDueDate ? (
-                      <>
-                        <span className="text-[#1890FF]">{formatDate(newTaskDueDate)}</span>
-                        <ChevronDown className="w-3 h-3 text-[#1890FF]" />
-                      </>
-                    ) : (
-                      <Calendar className="w-4 h-4" />
-                    )}
-                  </button>
-
-                  {/* 日期选择器浮层 */}
-                  {showDatePicker && (
-                    <div ref={datePickerRef} className="absolute top-full right-0 mt-2 z-50">
-                      <DatePicker
-                        selectedDate={newTaskDueDate}
-                        onSelect={(timestamp) => {
-                          setNewTaskDueDate(timestamp);
-                          setShowDatePicker(false);
-                        }}
-                        onClose={() => setShowDatePicker(false)}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* 属性展示 Chips */}
-            {hasAttributes && (
-              <div className="flex flex-wrap gap-2 px-10 pb-1">
-                {/* 优先级 Chip */}
-                {newTaskPriority !== undefined && (
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-gray-100/50 hover:bg-gray-100 cursor-default ${getPriorityColor(newTaskPriority)}`}>
-                    <Flag className="w-3 h-3" fill="currentColor" />
-                    {getPriorityLabel(newTaskPriority)}
+                {/* 右侧按钮组 */}
+                <div className="flex items-center gap-1">
+                  {/* 更多按钮 */}
+                  <div className="relative">
                     <button
                       type="button"
-                      onClick={() => setNewTaskPriority(undefined)}
-                      className="ml-1 hover:text-gray-700"
+                      onClick={() => setShowMoreMenu(!showMoreMenu)}
+                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
                     >
-                      <X className="w-3 h-3" />
+                      <MoreHorizontal className="w-4 h-4" />
                     </button>
-                  </span>
-                )}
 
-                {/* 标签 Chips */}
-                {newTaskTags.map(tagId => {
-                  const tag = allTags?.find(t => t.id === tagId);
-                  if (!tag) return null;
-                  return (
-                    <span key={tagId} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-blue-50 text-[#1890FF] hover:bg-blue-100 cursor-default">
-                      <Hash className="w-3 h-3" />
-                      {tag.name}
+                    {/* 更多菜单浮层 */}
+                    {showMoreMenu && (
+                      <div ref={moreMenuRef} className="absolute top-full right-0 mt-2 w-64 bg-white shadow-xl rounded-lg border border-gray-100 p-3 z-50 animate-in fade-in zoom-in-95 duration-100">
+                        {/* 优先级选择 */}
+                        <div className="mb-3">
+                          <div className="text-xs font-medium text-gray-500 mb-2">优先级</div>
+                          <div className="flex gap-2">
+                            {[3, 2, 1, 0].map((p) => {
+                              const isSelected = newTaskPriority === (p === 0 ? undefined : p);
+                              return (
+                                <button
+                                  key={p}
+                                  type="button"
+                                  aria-label={p === 0 ? '无优先级' : getPriorityLabel(p) + '优先级'}
+                                  onClick={() => {
+                                    setNewTaskPriority(p === 0 ? undefined : p);
+                                    setShowMoreMenu(false);
+                                  }}
+                                  className={`flex-1 flex items-center justify-center py-1.5 rounded text-sm hover:bg-gray-50 border transition-all ${isSelected ? 'border-[#1890FF] bg-blue-50' : 'border-transparent'}`}
+                                >
+                                  {p === 0 ? '无' : (
+                                    <Flag className={`w-4 h-4 ${getPriorityColor(p)}`} fill="currentColor" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* 标签选择 */}
+                        <div>
+                          <div className="text-xs font-medium text-gray-500 mb-2">标签</div>
+                          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                            {allTags?.map((tag) => {
+                              const isSelected = newTaskTags.includes(tag.id);
+                              return (
+                                <button
+                                  key={tag.id}
+                                  type="button"
+                                  aria-label={'选择标签 ' + tag.name}
+                                  onClick={() => toggleTag(tag.id)}
+                                  className={`px-2 py-1 text-xs rounded border transition-colors flex items-center gap-1 ${isSelected ? 'bg-blue-50 text-[#1890FF] border-[#1890FF]' : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'}`}
+                                >
+                                  {isSelected && <Check className="w-3 h-3" />}
+                                  {tag.name}
+                                </button>
+                              );
+                            })}
+                            {(!allTags || allTags.length === 0) && (
+                              <div className="text-xs text-gray-400 w-full text-center py-2">暂无标签</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 日期按钮 */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowDatePicker(!showDatePicker)}
+                      className="flex items-center gap-1 px-2 py-1 text-[13px] text-gray-500 hover:text-[#1890FF] hover:bg-blue-50 rounded transition-colors shrink-0"
+                    >
+                      {newTaskDueDate ? (
+                        <>
+                          <span className="text-[#1890FF]">{formatDate(newTaskDueDate)}</span>
+                          <ChevronDown className="w-3 h-3 text-[#1890FF]" />
+                        </>
+                      ) : (
+                        <Calendar className="w-4 h-4" />
+                      )}
+                    </button>
+
+                    {/* 日期选择器浮层 */}
+                    {showDatePicker && (
+                      <div ref={datePickerRef} className="absolute top-full right-0 mt-2 z-50">
+                        <DatePicker
+                          selectedDate={newTaskDueDate}
+                          onSelect={(timestamp) => {
+                            setNewTaskDueDate(timestamp);
+                            setShowDatePicker(false);
+                          }}
+                          onClose={() => setShowDatePicker(false)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 属性展示 Chips */}
+              {hasAttributes && (
+                <div className="flex flex-wrap gap-2 px-10 pb-1">
+                  {/* 优先级 Chip */}
+                  {newTaskPriority !== undefined && (
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-gray-100/50 hover:bg-gray-100 cursor-default ${getPriorityColor(newTaskPriority)}`}>
+                      <Flag className="w-3 h-3" fill="currentColor" />
+                      {getPriorityLabel(newTaskPriority)}
                       <button
                         type="button"
-                        onClick={() => toggleTag(tagId)}
-                        className="ml-1 hover:text-blue-700"
+                        onClick={() => setNewTaskPriority(undefined)}
+                        className="ml-1 hover:text-gray-700"
                       >
                         <X className="w-3 h-3" />
                       </button>
                     </span>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </form>
-      </div>
+                  )}
+
+                  {/* 标签 Chips */}
+                  {newTaskTags.map(tagId => {
+                    const tag = allTags?.find(t => t.id === tagId);
+                    if (!tag) return null;
+                    return (
+                      <span key={tagId} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-blue-50 text-[#1890FF] hover:bg-blue-100 cursor-default">
+                        <Hash className="w-3 h-3" />
+                        {tag.name}
+                        <button
+                          type="button"
+                          onClick={() => toggleTag(tagId)}
+                          className="ml-1 hover:text-blue-700"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* 任务列表 */}
       <div className="flex-1 overflow-y-auto w-full">
@@ -359,8 +393,8 @@ export default function TaskList() {
 
         {localTasks.length === 0 && (
           <div className="flex flex-col items-center justify-center h-64 text-gray-300">
-            <div className="text-5xl mb-4">✨</div>
-            <div className="text-[13px] font-medium">今天没有任务，享受生活吧</div>
+            <div className="text-5xl mb-4">{isTrashView ? '🗑️' : '✨'}</div>
+            <div className="text-[13px] font-medium">{isTrashView ? '垃圾桶是空的' : '今天没有任务，享受生活吧'}</div>
           </div>
         )}
       </div>

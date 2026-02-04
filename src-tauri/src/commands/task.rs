@@ -81,6 +81,21 @@ pub async fn delete_task(task_id: String, state: State<'_, AppState>) -> Result<
 }
 
 #[tauri::command]
+pub async fn undo_delete_task(task_id: String, state: State<'_, AppState>) -> Result<()> {
+    TaskRepository::undo_delete(&state.db, &task_id)
+}
+
+#[tauri::command]
+pub async fn delete_task_permanently(task_id: String, state: State<'_, AppState>) -> Result<()> {
+    TaskRepository::delete_permanently(&state.db, &task_id)
+}
+
+#[tauri::command]
+pub async fn empty_trash(state: State<'_, AppState>) -> Result<()> {
+    TaskRepository::empty_trash(&state.db)
+}
+
+#[tauri::command]
 pub async fn toggle_task(task_id: String, state: State<'_, AppState>) -> Result<Task> {
     let mut task = TaskRepository::get_by_id(&state.db, &task_id)?;
     task.toggle_completed();

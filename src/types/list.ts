@@ -14,4 +14,5 @@ export enum SmartListType {
   Week = 'smart_week',
   All = 'smart_all',
   Completed = 'smart_completed',
+  Trash = 'smart_trash',
 }

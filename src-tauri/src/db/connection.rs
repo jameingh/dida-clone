@@ -32,6 +32,7 @@ impl Database {
                 reminder INTEGER,
                 parent_id TEXT,
                 order_num INTEGER NOT NULL DEFAULT 0,
+                is_deleted INTEGER NOT NULL DEFAULT 0,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL,
                 completed_at INTEGER,
@@ -40,6 +41,9 @@ impl Database {
             )",
             [],
         )?;
+
+        // 确保 is_deleted 列存在 (简单迁移)
+        let _ = conn.execute("ALTER TABLE tasks ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0", []);
 
         // 创建清单表
         conn.execute(

@@ -11,8 +11,8 @@ impl TaskRepository {
         
         conn.execute(
             "INSERT INTO tasks (id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, created_at, updated_at, completed_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             params![
                 task.id,
                 task.title,
@@ -24,6 +24,7 @@ impl TaskRepository {
                 task.reminder,
                 task.parent_id,
                 task.order,
+                task.is_deleted as i32,
                 task.created_at,
                 task.updated_at,
                 task.completed_at,
@@ -46,7 +47,7 @@ impl TaskRepository {
         
         let mut stmt = conn.prepare(
             "SELECT id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, created_at, updated_at, completed_at
+             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
              FROM tasks WHERE id = ?1"
         )?;
 
@@ -62,9 +63,10 @@ impl TaskRepository {
                 reminder: row.get(7)?,
                 parent_id: row.get(8)?,
                 order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                completed_at: row.get(12)?,
+                is_deleted: row.get::<_, i32>(10)? != 0,
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
+                completed_at: row.get(13)?,
                 tags: Vec::new(), // 稍后加载
             })
         })?;
@@ -79,8 +81,8 @@ impl TaskRepository {
         
         let mut stmt = conn.prepare(
             "SELECT id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, created_at, updated_at, completed_at
-             FROM tasks ORDER BY order_num ASC, created_at DESC"
+             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+             FROM tasks WHERE is_deleted = 0 ORDER BY order_num ASC, created_at DESC"
         )?;
 
         let tasks = stmt.query_map([], |row| {
@@ -95,9 +97,10 @@ impl TaskRepository {
                 reminder: row.get(7)?,
                 parent_id: row.get(8)?,
                 order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                completed_at: row.get(12)?,
+                is_deleted: row.get::<_, i32>(10)? != 0,
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
+                completed_at: row.get(13)?,
                 tags: Vec::new(),
             })
         })?
@@ -116,13 +119,25 @@ impl TaskRepository {
     pub fn get_by_list(db: &Database, list_id: &str) -> Result<Vec<Task>> {
         let conn = db.conn.lock().unwrap();
         
-        let mut stmt = conn.prepare(
+        let query = if list_id == "smart_trash" {
             "SELECT id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, created_at, updated_at, completed_at
-             FROM tasks WHERE list_id = ?1 ORDER BY order_num ASC, created_at DESC"
-        )?;
+             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+             FROM tasks WHERE is_deleted = 1 ORDER BY updated_at DESC"
+        } else {
+            "SELECT id, title, description, list_id, completed, priority, 
+             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+             FROM tasks WHERE list_id = ?1 AND is_deleted = 0 ORDER BY order_num ASC, created_at DESC"
+        };
 
-        let tasks = stmt.query_map(params![list_id], |row| {
+        let mut stmt = conn.prepare(query)?;
+
+        let params_vec = if list_id == "smart_trash" {
+            params![]
+        } else {
+            params![list_id]
+        };
+
+        let tasks = stmt.query_map(params_vec, |row| {
             Ok(Task {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -134,9 +149,10 @@ impl TaskRepository {
                 reminder: row.get(7)?,
                 parent_id: row.get(8)?,
                 order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                completed_at: row.get(12)?,
+                is_deleted: row.get::<_, i32>(10)? != 0,
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
+                completed_at: row.get(13)?,
                 tags: Vec::new(),
             })
         })?
@@ -156,10 +172,10 @@ impl TaskRepository {
         
         let mut stmt = conn.prepare(
             "SELECT t.id, t.title, t.description, t.list_id, t.completed, t.priority, 
-             t.due_date, t.reminder, t.parent_id, t.order_num, t.created_at, t.updated_at, t.completed_at
+             t.due_date, t.reminder, t.parent_id, t.order_num, t.is_deleted, t.created_at, t.updated_at, t.completed_at
              FROM tasks t
              INNER JOIN task_tags tt ON t.id = tt.task_id
-             WHERE tt.tag_id = ?1
+             WHERE tt.tag_id = ?1 AND t.is_deleted = 0
              ORDER BY t.order_num ASC, t.created_at DESC"
         )?;
 
@@ -175,9 +191,10 @@ impl TaskRepository {
                 reminder: row.get(7)?,
                 parent_id: row.get(8)?,
                 order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                completed_at: row.get(12)?,
+                is_deleted: row.get::<_, i32>(10)? != 0,
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
+                completed_at: row.get(13)?,
                 tags: Vec::new(),
             })
         })?
@@ -197,8 +214,8 @@ impl TaskRepository {
         
         let mut stmt = conn.prepare(
             "SELECT id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, created_at, updated_at, completed_at
-             FROM tasks WHERE parent_id = ?1 ORDER BY order_num ASC, created_at DESC"
+             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+             FROM tasks WHERE parent_id = ?1 AND is_deleted = 0 ORDER BY order_num ASC, created_at DESC"
         )?;
 
         let tasks = stmt.query_map(params![parent_id], |row| {
@@ -213,9 +230,10 @@ impl TaskRepository {
                 reminder: row.get(7)?,
                 parent_id: row.get(8)?,
                 order: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-                completed_at: row.get(12)?,
+                is_deleted: row.get::<_, i32>(10)? != 0,
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
+                completed_at: row.get(13)?,
                 tags: Vec::new(),
             })
         })?
@@ -236,7 +254,7 @@ impl TaskRepository {
         conn.execute(
             "UPDATE tasks SET title = ?1, description = ?2, list_id = ?3, completed = ?4, 
              priority = ?5, due_date = ?6, reminder = ?7, parent_id = ?8, order_num = ?9, 
-             updated_at = ?10, completed_at = ?11 WHERE id = ?12",
+             is_deleted = ?10, updated_at = ?11, completed_at = ?12 WHERE id = ?13",
             params![
                 task.title,
                 task.description,
@@ -247,6 +265,7 @@ impl TaskRepository {
                 task.reminder,
                 task.parent_id,
                 task.order,
+                task.is_deleted as i32,
                 task.updated_at,
                 task.completed_at,
                 task.id,
@@ -268,12 +287,52 @@ impl TaskRepository {
     pub fn delete(db: &Database, task_id: &str) -> Result<()> {
         let conn = db.conn.lock().unwrap();
         
+        let now = chrono::Utc::now().timestamp();
+        let rows_affected = conn.execute(
+            "UPDATE tasks SET is_deleted = 1, updated_at = ?1 WHERE id = ?2", 
+            params![now, task_id]
+        )?;
+        
+        if rows_affected == 0 {
+            return Err(AppError::NotFound(format!("Task {} not found", task_id)));
+        }
+
+        Ok(())
+    }
+
+    pub fn undo_delete(db: &Database, task_id: &str) -> Result<()> {
+        let conn = db.conn.lock().unwrap();
+        
+        let now = chrono::Utc::now().timestamp();
+        let rows_affected = conn.execute(
+            "UPDATE tasks SET is_deleted = 0, updated_at = ?1 WHERE id = ?2", 
+            params![now, task_id]
+        )?;
+        
+        if rows_affected == 0 {
+            return Err(AppError::NotFound(format!("Task {} not found", task_id)));
+        }
+
+        Ok(())
+    }
+
+    pub fn delete_permanently(db: &Database, task_id: &str) -> Result<()> {
+        let conn = db.conn.lock().unwrap();
+        
         let rows_affected = conn.execute("DELETE FROM tasks WHERE id = ?1", params![task_id])?;
         
         if rows_affected == 0 {
             return Err(AppError::NotFound(format!("Task {} not found", task_id)));
         }
 
+        Ok(())
+    }
+
+    pub fn empty_trash(db: &Database) -> Result<()> {
+        let conn = db.conn.lock().unwrap();
+        
+        conn.execute("DELETE FROM tasks WHERE is_deleted = 1", [])?;
+        
         Ok(())
     }
 

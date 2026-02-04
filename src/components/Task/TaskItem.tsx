@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Task, Priority } from '../../types';
-import { useToggleTask, useUpdateTask, useDeleteTask } from '../../hooks/useTasks';
+import { useToggleTask, useUpdateTask, useDeleteTask, useUndoDeleteTask, useDeleteTaskPermanently } from '../../hooks/useTasks';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
-import { Calendar, GripVertical, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useAlertStore } from '../../store/useAlertStore';
+import { Calendar, GripVertical, MoreHorizontal, Trash2, RotateCcw, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import ContextMenu, { ContextMenuItem, ContextMenuSeparator } from '../Common/ContextMenu';
 import { useSortable } from '@dnd-kit/sortable';
@@ -16,10 +17,14 @@ interface TaskItemProps {
 export default function TaskItem({ task }: TaskItemProps) {
   const toggleTask = useToggleTask();
   const deleteTask = useDeleteTask();
+  const undoDeleteTask = useUndoDeleteTask();
+  const deleteTaskPermanently = useDeleteTaskPermanently();
   const updateTask = useUpdateTask();
   const { data: allTags } = useTags();
-  const { selectedTaskId, setSelectedTaskId } = useAppStore();
+  const { selectedTaskId, setSelectedTaskId, showToast, selectedListId } = useAppStore();
+  const { showAlert } = useAlertStore();
   const isSelected = selectedTaskId === task.id;
+  const isTrashView = selectedListId === 'smart_trash';
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -45,7 +50,7 @@ export default function TaskItem({ task }: TaskItemProps) {
     toggleTask.mutate(task.id);
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = () => {
     // 如果正在拖拽，不触发点击
     if (isDragging) return;
     setSelectedTaskId(task.id);
@@ -53,10 +58,34 @@ export default function TaskItem({ task }: TaskItemProps) {
 
   const handleDelete = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (confirm('确定要删除这个任务吗？')) {
-      deleteTask.mutate(task.id);
-    }
+    deleteTask.mutate(task.id, {
+      onSuccess: () => {
+        showToast('任务已删除', '撤销', () => {
+          undoDeleteTask.mutate(task.id);
+        });
+      }
+    });
     setMenuPos(null);
+  };
+
+  const handleRestore = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    undoDeleteTask.mutate(task.id);
+    setMenuPos(null);
+  };
+
+  const handleDeletePermanently = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setMenuPos(null);
+    showAlert({
+      title: '永久删除任务',
+      message: '确定要永久删除这个任务吗？此操作不可撤销。',
+      type: 'error',
+      confirmLabel: '删除',
+      onConfirm: () => {
+        deleteTaskPermanently.mutate(task.id);
+      }
+    });
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -168,72 +197,111 @@ export default function TaskItem({ task }: TaskItemProps) {
 
         {/* 快速操作 - 仅悬浮可见 */}
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity pr-2">
-          <button
-            title="设置日期"
-            className="p-1 px-1.5 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <Calendar className="w-3.5 h-3.5" />
-          </button>
-          <button
-            title="删除"
-            onClick={handleDelete}
-            className="p-1 px-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            title="更多"
-            onClick={handleContextMenu}
-            className="p-1 px-1.5 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <MoreHorizontal className="w-3.5 h-3.5" />
-          </button>
+          {isTrashView ? (
+            <>
+              <button
+                title="恢复"
+                onClick={handleRestore}
+                className="p-1 px-1.5 hover:bg-blue-50 rounded text-gray-400 hover:text-blue-500 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+              <button
+                title="永久删除"
+                onClick={handleDeletePermanently}
+                className="p-1 px-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                title="设置日期"
+                className="p-1 px-1.5 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+              </button>
+              <button
+                title="删除"
+                onClick={handleDelete}
+                className="p-1 px-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                title="更多"
+                onClick={handleContextMenu}
+                className="p-1 px-1.5 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <MoreHorizontal className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {menuPos && (
         <ContextMenu x={menuPos.x} y={menuPos.y} onClose={() => setMenuPos(null)}>
-          <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">截止日期</div>
-          <ContextMenuItem label="今天" onClick={() => handleSetDate(0)} />
-          <ContextMenuItem label="明天" onClick={() => handleSetDate(1)} />
-          <ContextMenuItem label="下周" onClick={() => handleSetDate(7)} />
+          {isTrashView ? (
+            <>
+              <ContextMenuItem
+                label="恢复任务"
+                onClick={handleRestore}
+                icon={<RotateCcw className="w-4 h-4" />}
+              />
+              <ContextMenuItem
+                label="永久删除"
+                danger
+                onClick={handleDeletePermanently}
+                icon={<XCircle className="w-4 h-4" />}
+              />
+            </>
+          ) : (
+            <>
+              <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">截止日期</div>
+              <ContextMenuItem label="今天" onClick={() => handleSetDate(0)} />
+              <ContextMenuItem label="明天" onClick={() => handleSetDate(1)} />
+              <ContextMenuItem label="下周" onClick={() => handleSetDate(7)} />
 
-          <ContextMenuSeparator />
+              <ContextMenuSeparator />
 
-          <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">优先级</div>
-          <ContextMenuItem
-            label="高优先级"
-            active={task.priority === Priority.High}
-            onClick={() => handleSetPriority(Priority.High)}
-            icon={<div className="w-2 h-2 rounded-full bg-red-500" />}
-          />
-          <ContextMenuItem
-            label="中优先级"
-            active={task.priority === Priority.Medium}
-            onClick={() => handleSetPriority(Priority.Medium)}
-            icon={<div className="w-2 h-2 rounded-full bg-orange-500" />}
-          />
-          <ContextMenuItem
-            label="低优先级"
-            active={task.priority === Priority.Low}
-            onClick={() => handleSetPriority(Priority.Low)}
-            icon={<div className="w-2 h-2 rounded-full bg-blue-500" />}
-          />
-          <ContextMenuItem
-            label="无优先级"
-            active={task.priority === Priority.None}
-            onClick={() => handleSetPriority(Priority.None)}
-            icon={<div className="w-2 h-2 rounded-full bg-gray-300" />}
-          />
+              <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">优先级</div>
+              <ContextMenuItem
+                label="高优先级"
+                active={task.priority === Priority.High}
+                onClick={() => handleSetPriority(Priority.High)}
+                icon={<div className="w-2 h-2 rounded-full bg-red-500" />}
+              />
+              <ContextMenuItem
+                label="中优先级"
+                active={task.priority === Priority.Medium}
+                onClick={() => handleSetPriority(Priority.Medium)}
+                icon={<div className="w-2 h-2 rounded-full bg-orange-500" />}
+              />
+              <ContextMenuItem
+                label="低优先级"
+                active={task.priority === Priority.Low}
+                onClick={() => handleSetPriority(Priority.Low)}
+                icon={<div className="w-2 h-2 rounded-full bg-blue-500" />}
+              />
+              <ContextMenuItem
+                label="无优先级"
+                active={task.priority === Priority.None}
+                onClick={() => handleSetPriority(Priority.None)}
+                icon={<div className="w-2 h-2 rounded-full bg-gray-300" />}
+              />
 
-          <ContextMenuSeparator />
+              <ContextMenuSeparator />
 
-          <ContextMenuItem
-            label="删除任务"
-            danger
-            onClick={() => handleDelete()}
-            icon={<Trash2 className="w-4 h-4" />}
-          />
+              <ContextMenuItem
+                label="删除任务"
+                danger
+                onClick={() => handleDelete()}
+                icon={<Trash2 className="w-4 h-4" />}
+              />
+            </>
+          )}
         </ContextMenu>
       )}
     </>

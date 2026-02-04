@@ -47,6 +47,9 @@ pub fn run() {
             commands::task::get_task,
             commands::task::update_task,
             commands::task::delete_task,
+            commands::task::undo_delete_task,
+            commands::task::delete_task_permanently,
+            commands::task::empty_trash,
             commands::task::toggle_task,
             // 清单命令
             commands::list::create_list,
@@ -81,6 +84,7 @@ fn init_default_data(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
         models::List::new_smart(SmartListType::Week),
         models::List::new_smart(SmartListType::All),
         models::List::new_smart(SmartListType::Completed),
+        models::List::new_smart(SmartListType::Trash),
     ];
     
     for (index, mut list) in smart_lists.into_iter().enumerate() {

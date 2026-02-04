@@ -17,6 +17,7 @@ export interface Task {
   tags: string[];
   parent_id: string | null;
   order: number;
+  is_deleted: boolean;
   created_at: number;
   updated_at: number;
   completed_at: number | null;

@@ -40,6 +40,7 @@ function createBrowserTaskBase(partial: Partial<Task> & Pick<Task, 'title' | 'li
     tags: partial.tags ?? [],
     parent_id: partial.parent_id ?? null,
     order: partial.order ?? 0,
+    is_deleted: partial.is_deleted ?? false,
     created_at: partial.created_at ?? now,
     updated_at: partial.updated_at ?? now,
     completed_at: partial.completed_at ?? null,
@@ -49,13 +50,17 @@ function createBrowserTaskBase(partial: Partial<Task> & Pick<Task, 'title' | 'li
 const browserTaskStore = {
   async getTasks(listId?: string): Promise<Task[]> {
     const tasks = loadBrowserTasks();
-    if (!listId) return tasks;
-    return tasks.filter(t => t.list_id === listId);
+    if (listId === 'smart_trash') {
+      return tasks.filter(t => t.is_deleted);
+    }
+    const filtered = tasks.filter(t => !t.is_deleted);
+    if (!listId) return filtered;
+    return filtered.filter(t => t.list_id === listId);
   },
 
   async getTasksByTag(tagId: string): Promise<Task[]> {
     const tasks = loadBrowserTasks();
-    return tasks.filter(t => t.tags.includes(tagId));
+    return tasks.filter(t => !t.is_deleted && t.tags.includes(tagId));
   },
 
   async getTask(taskId: string): Promise<Task> {
@@ -151,7 +156,33 @@ const browserTaskStore = {
 
   async deleteTask(taskId: string): Promise<void> {
     const tasks = loadBrowserTasks();
+    const idx = tasks.findIndex(t => t.id === taskId);
+    if (idx !== -1) {
+      tasks[idx].is_deleted = true;
+      tasks[idx].updated_at = Math.floor(Date.now() / 1000);
+      saveBrowserTasks(tasks);
+    }
+  },
+
+  async undoDeleteTask(taskId: string): Promise<void> {
+    const tasks = loadBrowserTasks();
+    const idx = tasks.findIndex(t => t.id === taskId);
+    if (idx !== -1) {
+      tasks[idx].is_deleted = false;
+      tasks[idx].updated_at = Math.floor(Date.now() / 1000);
+      saveBrowserTasks(tasks);
+    }
+  },
+
+  async deleteTaskPermanently(taskId: string): Promise<void> {
+    const tasks = loadBrowserTasks();
     const next = tasks.filter(t => t.id !== taskId);
+    saveBrowserTasks(next);
+  },
+
+  async emptyTrash(): Promise<void> {
+    const tasks = loadBrowserTasks();
+    const next = tasks.filter(t => !t.is_deleted);
     saveBrowserTasks(next);
   },
 
@@ -264,6 +295,21 @@ export const taskService = {
   async deleteTask(taskId: string): Promise<void> {
     if (!isTauriEnv()) return browserTaskStore.deleteTask(taskId);
     return await invoke('delete_task', { taskId });
+  },
+
+  async undoDeleteTask(taskId: string): Promise<void> {
+    if (!isTauriEnv()) return browserTaskStore.undoDeleteTask(taskId);
+    return await invoke('undo_delete_task', { taskId });
+  },
+
+  async deleteTaskPermanently(taskId: string): Promise<void> {
+    if (!isTauriEnv()) return browserTaskStore.deleteTaskPermanently(taskId);
+    return await invoke('delete_task_permanently', { taskId });
+  },
+
+  async emptyTrash(): Promise<void> {
+    if (!isTauriEnv()) return browserTaskStore.emptyTrash();
+    return await invoke('empty_trash');
   },
 
   async toggleTask(taskId: string): Promise<Task> {

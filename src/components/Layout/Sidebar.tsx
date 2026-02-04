@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLists } from '../../hooks/useLists';
 import { useTags, useCreateTag } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
-import { Plus, Hash } from 'lucide-react';
+import { Plus, Hash, Trash2 } from 'lucide-react';
 
 export default function Sidebar() {
   const { data: lists, isLoading: isListsLoading } = useLists();
@@ -162,6 +162,22 @@ export default function Sidebar() {
               <div className="px-3 py-2 text-xs text-gray-400 italic">暂无标签</div>
             )}
           </div>
+        </div>
+
+        {/* 垃圾桶 - 独立项 */}
+        <div className="mt-auto mb-4">
+          <button
+            onClick={() => setSelectedListId('smart_trash')}
+            className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md transition-colors group ${selectedListId === 'smart_trash'
+              ? 'bg-[#E6F7FF] text-[#1890FF]'
+              : 'text-gray-700 hover:bg-gray-200'
+              }`}
+          >
+            <div className="flex items-center gap-3">
+              <Trash2 className={`w-4 h-4 ${selectedListId === 'smart_trash' ? 'text-[#1890FF]' : 'text-gray-400'}`} />
+              <span className={`text-sm ${selectedListId === 'smart_trash' ? 'font-semibold' : 'font-medium'}`}>垃圾桶</span>
+            </div>
+          </button>
         </div>
       </div>
     </aside>
