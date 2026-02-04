@@ -44,13 +44,16 @@ export default function TaskList() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInputValue, setTitleInputValue] = useState('');
   
-  // 当切换标签时，重置标题输入框
+  // 当切换标签时，重置标题输入框和预设标签
   useEffect(() => {
     if (selectedTagId && allTags) {
       const tag = allTags.find(t => t.id === selectedTagId);
       if (tag) {
         setTitleInputValue(tag.name);
+        setNewTaskTags([selectedTagId]); // 切换标签时，默认选中当前标签
       }
+    } else {
+      setNewTaskTags([]);
     }
   }, [selectedTagId, allTags]);
 
@@ -116,9 +119,11 @@ export default function TaskList() {
     return `${month}月${day}日, ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
 
-  const handleAddTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newTaskTitle.trim() && selectedListId) {
+  const handleAddTask = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (newTaskTitle.trim()) {
+      // 如果没有 selectedListId，默认为收集箱 (inbox)
+      const listId = selectedListId || 'smart_inbox';
       let title = newTaskTitle.trim();
       const tagsToAssign = new Set(newTaskTags);
 

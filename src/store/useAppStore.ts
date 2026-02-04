@@ -28,8 +28,16 @@ export const useAppStore = create<AppState>((set) => ({
     message: '',
     visible: false,
   },
-  setSelectedListId: (id) => set({ selectedListId: id, selectedTagId: null }),
-  setSelectedTagId: (id) => set({ selectedTagId: id, selectedListId: null }),
+  setSelectedListId: (id) => set({ 
+    selectedListId: id, 
+    selectedTagId: null,
+    selectedTaskId: null // 切换清单时清空选中的任务
+  }),
+  setSelectedTagId: (id) => set({ 
+    selectedTagId: id, 
+    selectedListId: null,
+    selectedTaskId: null // 切换标签时清空选中的任务
+  }),
   setSelectedTaskId: (id) => set({ selectedTaskId: id }),
   setViewMode: (mode) => set({ viewMode: mode }),
   showToast: (message, actionLabel, onAction) => set({
