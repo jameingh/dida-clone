@@ -167,29 +167,27 @@ export default function TaskItem({ task }: TaskItemProps) {
           >
             {task.title}
           </div>
-
-          {/* 简洁元信息 - 仅保留标签 */}
-          {task.tags.length > 0 && (
-            <div className="flex items-center gap-2 mt-0.5">
-              <div className="flex gap-1">
-                {task.tags.slice(0, 3).map((tagId) => {
-                  const tag = allTags?.find(t => t.id === tagId);
-                  return (
-                    <span
-                      key={tagId}
-                      className="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-medium"
-                      style={tag ? { color: tag.color, backgroundColor: `${tag.color}15` } : undefined}
-                    >
-                      #{tag?.name || '未知'}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* 任务日期 - 移动到右侧 */}
+        {/* 标签 - 移动到右侧，日期的左边 */}
+        {task.tags.length > 0 && (
+          <div className="flex-shrink-0 flex gap-1 px-1">
+            {task.tags.slice(0, 3).map((tagId) => {
+              const tag = allTags?.find(t => t.id === tagId);
+              return (
+                <span
+                  key={tagId}
+                  className="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-medium"
+                  style={tag ? { color: tag.color, backgroundColor: `${tag.color}15` } : undefined}
+                >
+                  #{tag?.name || '未知'}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 任务日期 - 已经在右侧 */}
         {task.due_date && (
           <div className="flex-shrink-0 flex items-center text-[11px] text-gray-400 font-medium px-2">
             <span>{format(new Date(task.due_date * 1000), 'M月d日')}</span>
