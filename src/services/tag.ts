@@ -31,13 +31,15 @@ const browserTagStore = {
     return [...tags].sort((a, b) => a.created_at - b.created_at);
   },
 
-  async createTag(name: string, color: string): Promise<Tag> {
+  async createTag(name: string, color: string, parentId?: string | null): Promise<Tag> {
     const tags = loadBrowserTags();
     const now = Math.floor(Date.now() / 1000);
     const tag: Tag = {
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
       name,
       color,
+      parent_id: parentId,
+      is_pinned: false,
       created_at: now,
     };
     tags.push(tag);
@@ -65,9 +67,9 @@ const browserTagStore = {
 };
 
 export const tagService = {
-  async createTag(name: string, color: string): Promise<Tag> {
-    if (!isTauriEnv()) return browserTagStore.createTag(name, color);
-    return await invoke('create_tag', { name, color });
+  async createTag(name: string, color: string, parentId?: string | null): Promise<Tag> {
+    if (!isTauriEnv()) return browserTagStore.createTag(name, color, parentId);
+    return await invoke('create_tag', { name, color, parentId });
   },
 
   async updateTag(tag: Tag): Promise<Tag> {

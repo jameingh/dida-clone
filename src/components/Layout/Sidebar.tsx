@@ -1,37 +1,137 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useLists } from '../../hooks/useLists';
-import { useTags, useCreateTag } from '../../hooks/useTags';
+import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
-import { Plus, Hash, Trash2 } from 'lucide-react';
+import { Plus, Hash, ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
+import AddTagModal from '../Tag/AddTagModal';
+import TagContextMenu from '../Tag/TagContextMenu';
+import { Tag } from '../../types';
+import { useDeleteTag, useUpdateTag } from '../../hooks/useTags';
+import { useAlertStore } from '../../store/useAlertStore';
+
+interface TagNode extends Tag {
+  children: TagNode[];
+}
 
 export default function Sidebar() {
   const { data: lists, isLoading: isListsLoading } = useLists();
   const { data: tags, isLoading: isTagsLoading } = useTags();
   const { selectedListId, setSelectedListId, selectedTagId, setSelectedTagId } = useAppStore();
-  const createTag = useCreateTag();
+  const deleteTag = useDeleteTag();
+  const updateTag = useUpdateTag();
+  const { showAlert } = useAlertStore();
 
-  const [isCreatingTag, setIsCreatingTag] = useState(false);
-  const [newTagName, setNewTagName] = useState('');
-  const newTagInputRef = useRef<HTMLInputElement>(null);
+  const [isAddTagModalOpen, setIsAddTagModalOpen] = useState(false);
+  const [tagToEdit, setTagToEdit] = useState<Tag | null>(null);
+  const [initialParentId, setInitialParentId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isCreatingTag) {
-      newTagInputRef.current?.focus();
-    }
-  }, [isCreatingTag]);
+  const [isTagsExpanded, setIsTagsExpanded] = useState(true);
+  const [expandedTagIds, setExpandedTagIds] = useState<Set<string>>(new Set());
 
-  const handleCreateTag = (e: React.FormEvent) => {
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tag: Tag } | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent, tag: Tag) => {
     e.preventDefault();
-    if (newTagName.trim()) {
-      createTag.mutate({
-        name: newTagName.trim(),
-        color: '#87d068' // 默认绿色，后续可改
-      });
-      setNewTagName('');
-      setIsCreatingTag(false);
-    } else {
-      setIsCreatingTag(false);
-    }
+    setContextMenu({ x: e.clientX, y: e.clientY, tag });
+  };
+
+  const handleTogglePin = (tag: Tag) => {
+    updateTag.mutate({
+      ...tag,
+      is_pinned: !tag.is_pinned,
+    });
+  };
+
+  const handleDeleteTag = (tag: Tag) => {
+    showAlert({
+      title: '删除标签',
+      message: `确定要删除标签 "${tag.name}" 吗？此操作不可撤销。`,
+      type: 'error',
+      confirmLabel: '删除',
+      onConfirm: () => {
+        deleteTag.mutate(tag.id);
+        if (selectedTagId === tag.id) {
+          setSelectedTagId(null);
+        }
+      },
+    });
+  };
+
+  const toggleTagExpanded = (tagId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedTagIds(prev => {
+      const next = new Set(prev);
+      if (next.has(tagId)) {
+        next.delete(tagId);
+      } else {
+        next.add(tagId);
+      }
+      return next;
+    });
+  };
+
+  const tagTree = useMemo(() => {
+    if (!tags) return [];
+    const map = new Map<string, TagNode>();
+    const roots: TagNode[] = [];
+
+    tags.forEach(tag => {
+      map.set(tag.id, { ...tag, children: [] });
+    });
+
+    tags.forEach(tag => {
+      const node = map.get(tag.id)!;
+      if (tag.parent_id && map.has(tag.parent_id)) {
+        map.get(tag.parent_id)!.children.push(node);
+      } else {
+        roots.push(node);
+      }
+    });
+
+    return roots;
+  }, [tags]);
+
+  const renderTag = (node: TagNode, level: number = 0) => {
+    const isExpanded = expandedTagIds.has(node.id);
+    const hasChildren = node.children.length > 0;
+    const isSelected = selectedTagId === node.id;
+
+    return (
+      <div key={node.id} className="flex flex-col">
+        <button
+          onClick={() => setSelectedTagId(node.id)}
+          onContextMenu={(e) => handleContextMenu(e, node)}
+          className={`w-full flex items-center justify-between py-1.5 rounded-md transition-colors group ${isSelected
+            ? 'bg-[#E6F7FF] text-[#1890FF]'
+            : 'text-gray-700 hover:bg-gray-200'
+            }`}
+          style={{ paddingLeft: `${level * 16 + 12}px`, paddingRight: '12px' }}
+        >
+          <div className="flex items-center gap-2 overflow-hidden">
+            <div className="flex items-center">
+              {hasChildren ? (
+                <div 
+                  onClick={(e) => toggleTagExpanded(node.id, e)}
+                  className="w-4 h-4 flex items-center justify-center hover:bg-gray-300 rounded transition-colors mr-1"
+                >
+                  {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                </div>
+              ) : (
+                <div className="w-5" /> 
+              )}
+              <Hash className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[#1890FF]' : 'text-gray-400'}`} />
+            </div>
+            <span className={`text-sm truncate ${isSelected ? 'font-semibold' : 'font-medium'}`}>{node.name}</span>
+          </div>
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: node.color || '#CBD5E0' }} />
+        </button>
+        {hasChildren && isExpanded && (
+          <div className="flex flex-col">
+            {node.children.map(child => renderTag(child, level + 1))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const isLoading = isListsLoading || isTagsLoading;
@@ -48,10 +148,37 @@ export default function Sidebar() {
 
   const smartLists = lists?.filter((list) => list.is_smart) || [];
   const customLists = lists?.filter((list) => !list.is_smart) || [];
+  const pinnedTags = tags?.filter((tag) => tag.is_pinned) || [];
 
   return (
     <aside className="w-60 bg-[#FAFAFA] border-r border-gray-200 flex flex-col pt-4 overflow-y-auto">
       <div className="flex-1 px-2">
+        {/* 置顶标签区域 */}
+        {pinnedTags.length > 0 && (
+          <div className="mb-6 grid grid-cols-4 gap-1 px-1">
+            {pinnedTags.map((tag) => (
+              <button
+                key={tag.id}
+                onClick={() => setSelectedTagId(tag.id)}
+                onContextMenu={(e) => handleContextMenu(e, tag)}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all hover:bg-gray-100 border border-transparent group ${
+                  selectedTagId === tag.id ? 'bg-white shadow-sm border-gray-100' : ''
+                }`}
+                title={tag.name}
+              >
+                <div 
+                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1 transition-colors bg-white shadow-sm border border-gray-50 group-hover:border-gray-100"
+                >
+                  <Hash className="w-4 h-4" style={{ color: tag.color }} />
+                </div>
+                <span className="text-[10px] font-medium text-gray-500 truncate w-full text-center px-0.5">
+                  {tag.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* 智能清单 */}
         <div className="mb-2 space-y-0.5">
           {smartLists.map((list) => (
@@ -110,60 +237,92 @@ export default function Sidebar() {
 
         {/* 标签列表 */}
         <div className="mt-6">
-          <div className="px-3 py-2 flex items-center justify-between group cursor-pointer hover:bg-gray-100/50 rounded-md">
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              标签
+          <div 
+            onClick={() => setIsTagsExpanded(!isTagsExpanded)}
+            className="px-1 py-1.5 flex items-center justify-between group cursor-pointer hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <div className="flex items-center gap-0.5">
+              <div className="w-5 h-5 flex items-center justify-center text-gray-400">
+                {isTagsExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              </div>
+              <div className="text-[12px] font-bold text-gray-500 tracking-wider">
+                标签
+              </div>
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsCreatingTag(true);
-              }}
-              className="text-gray-400 hover:text-[#1890FF] opacity-0 group-hover:opacity-100 transition-all p-0.5 rounded"
-              title="新建标签"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="space-y-0.5 mt-0.5">
-            {tags?.map((tag) => (
+            <div className="flex items-center gap-1">
               <button
-                key={tag.id}
-                onClick={() => setSelectedTagId(tag.id)}
-                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md transition-colors group ${selectedTagId === tag.id
-                  ? 'bg-[#E6F7FF] text-[#1890FF]'
-                  : 'text-gray-700 hover:bg-gray-200'
-                  }`}
+                className="text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-gray-200"
+                title="更多操作"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // 更多操作逻辑
+                }}
               >
-                <div className="flex items-center gap-3">
-                  <Hash className={`w-4 h-4 ${selectedTagId === tag.id ? 'text-[#1890FF]' : 'text-gray-400'}`} />
-                  <span className={`text-sm ${selectedTagId === tag.id ? 'font-semibold' : 'font-medium'}`}>{tag.name}</span>
-                </div>
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#CBD5E0' }} />
+                <MoreHorizontal className="w-3.5 h-3.5" />
               </button>
-            ))}
-
-            {/* 新建标签输入框 */}
-            {isCreatingTag && (
-              <form onSubmit={handleCreateTag} className="px-3 py-1.5">
-                <input
-                  ref={newTagInputRef}
-                  type="text"
-                  value={newTagName}
-                  onChange={(e) => setNewTagName(e.target.value)}
-                  onBlur={() => !newTagName && setIsCreatingTag(false)}
-                  placeholder="标签名称..."
-                  className="w-full px-2 py-1 text-sm bg-white border border-[#1890FF] rounded outline-none"
-                />
-              </form>
-            )}
-
-            {!isCreatingTag && tags?.length === 0 && (
-              <div className="px-3 py-2 text-xs text-gray-400 italic">暂无标签</div>
-            )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsAddTagModalOpen(true);
+                }}
+                className="text-gray-400 hover:text-[#1890FF] opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-gray-200"
+                title="新建标签"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
+          
+          {isTagsExpanded && (
+            <div className="space-y-0.5 mt-0.5">
+              {tagTree.map((node) => renderTag(node))}
+
+              {tagTree.length === 0 && (
+                <div className="px-3 py-2 text-xs text-gray-400 italic">暂无标签</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+      
+      <AddTagModal 
+        isOpen={isAddTagModalOpen} 
+        onClose={() => {
+          setIsAddTagModalOpen(false);
+          setTagToEdit(null);
+          setInitialParentId(null);
+        }} 
+        tagToEdit={tagToEdit}
+        initialParentId={initialParentId}
+      />
+
+      {contextMenu && (
+        <TagContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isPinned={contextMenu.tag.is_pinned}
+          onClose={() => setContextMenu(null)}
+          onEdit={() => {
+            setTagToEdit(contextMenu.tag);
+            setIsAddTagModalOpen(true);
+          }}
+          onPin={() => handleTogglePin(contextMenu.tag)}
+          onAddSubTag={() => {
+            setInitialParentId(contextMenu.tag.id);
+            setTagToEdit(null);
+            setIsAddTagModalOpen(true);
+          }}
+          onMerge={() => {
+            // 实现合并逻辑
+            console.log('Merge tag:', contextMenu.tag.id);
+          }}
+          onShare={() => {
+            // 实现共享逻辑
+            console.log('Share tag:', contextMenu.tag.id);
+          }}
+          onDelete={() => handleDeleteTag(contextMenu.tag)}
+        />
+      )}
     </aside>
   );
 }

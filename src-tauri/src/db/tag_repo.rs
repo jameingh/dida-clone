@@ -10,8 +10,8 @@ impl TagRepository {
         let conn = db.conn.lock().unwrap();
         
         conn.execute(
-            "INSERT INTO tags (id, name, color, created_at) VALUES (?1, ?2, ?3, ?4)",
-            params![tag.id, tag.name, tag.color, tag.created_at],
+            "INSERT INTO tags (id, name, color, parent_id, is_pinned, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![tag.id, tag.name, tag.color, tag.parent_id, if tag.is_pinned { 1 } else { 0 }, tag.created_at],
         )?;
 
         Ok(tag.clone())
@@ -21,7 +21,7 @@ impl TagRepository {
         let conn = db.conn.lock().unwrap();
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, color, created_at FROM tags WHERE id = ?1"
+            "SELECT id, name, color, parent_id, is_pinned, created_at FROM tags WHERE id = ?1"
         )?;
 
         let tag = stmt.query_row(params![tag_id], |row| {
@@ -29,7 +29,9 @@ impl TagRepository {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 color: row.get(2)?,
-                created_at: row.get(3)?,
+                parent_id: row.get(3)?,
+                is_pinned: row.get::<_, i32>(4)? != 0,
+                created_at: row.get(5)?,
             })
         })?;
 
@@ -40,7 +42,7 @@ impl TagRepository {
         let conn = db.conn.lock().unwrap();
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, color, created_at FROM tags ORDER BY name ASC"
+            "SELECT id, name, color, parent_id, is_pinned, created_at FROM tags ORDER BY name ASC"
         )?;
 
         let tags = stmt.query_map([], |row| {
@@ -48,7 +50,9 @@ impl TagRepository {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 color: row.get(2)?,
-                created_at: row.get(3)?,
+                parent_id: row.get(3)?,
+                is_pinned: row.get::<_, i32>(4)? != 0,
+                created_at: row.get(5)?,
             })
         })?
         .collect::<rusqlite::Result<Vec<Tag>>>()?;
@@ -60,8 +64,8 @@ impl TagRepository {
         let conn = db.conn.lock().unwrap();
         
         let rows_affected = conn.execute(
-            "UPDATE tags SET name = ?1, color = ?2 WHERE id = ?3",
-            params![tag.name, tag.color, tag.id],
+            "UPDATE tags SET name = ?1, color = ?2, parent_id = ?3, is_pinned = ?4 WHERE id = ?5",
+            params![tag.name, tag.color, tag.parent_id, if tag.is_pinned { 1 } else { 0 }, tag.id],
         )?;
 
         if rows_affected == 0 {

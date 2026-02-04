@@ -16,7 +16,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DatePickerProps {
     selectedDate?: number; // Unix timestamp
-    onSelect: (timestamp: number) => void;
+    onSelect: (timestamp: number | undefined) => void;
     onClose: () => void;
 }
 
@@ -31,8 +31,8 @@ export default function DatePicker({ selectedDate, onSelect, onClose }: DatePick
         }
         return { hour: 21, minute: 0 };
     });
-    const [tempSelectedDate, setTempSelectedDate] = useState<Date | null>(
-        selectedDate ? new Date(selectedDate * 1000) : null
+    const [tempSelectedDate, setTempSelectedDate] = useState<Date>(
+        selectedDate ? new Date(selectedDate * 1000) : new Date()
     );
 
     // 快捷选项
@@ -62,11 +62,13 @@ export default function DatePicker({ selectedDate, onSelect, onClose }: DatePick
     };
 
     const handleConfirm = () => {
-        if (tempSelectedDate) {
-            const finalDate = new Date(tempSelectedDate);
-            finalDate.setHours(selectedTime.hour, selectedTime.minute, 0, 0);
-            onSelect(Math.floor(finalDate.getTime() / 1000));
-        }
+        const finalDate = new Date(tempSelectedDate);
+        finalDate.setHours(selectedTime.hour, selectedTime.minute, 0, 0);
+        onSelect(Math.floor(finalDate.getTime() / 1000));
+    };
+
+    const handleClear = () => {
+        onSelect(undefined);
     };
 
     const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
@@ -126,7 +128,7 @@ export default function DatePicker({ selectedDate, onSelect, onClose }: DatePick
                 <div className="grid grid-cols-7 gap-1">
                     {calendarDays.map((day) => {
                         const isCurrentMonth = day.getMonth() === viewDate.getMonth();
-                        const isSelected = tempSelectedDate && isSameDay(day, tempSelectedDate);
+                        const isSelected = isSameDay(day, tempSelectedDate);
                         const isTodayDate = isToday(day);
 
                         return (
@@ -183,16 +185,15 @@ export default function DatePicker({ selectedDate, onSelect, onClose }: DatePick
             <div className="flex gap-2 p-3 border-t border-gray-100">
                 <button
                     type="button"
-                    onClick={onClose}
-                    className="flex-1 px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                    onClick={handleClear}
+                    className="flex-1 px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded transition-colors"
                 >
-                    取消
+                    清除
                 </button>
                 <button
                     type="button"
                     onClick={handleConfirm}
-                    disabled={!tempSelectedDate}
-                    className="flex-1 px-4 py-2 text-sm text-white bg-[#1890FF] hover:bg-[#1677D2] rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 text-sm text-white bg-[#1890FF] hover:bg-[#1677D2] rounded transition-colors"
                 >
                     确定
                 </button>

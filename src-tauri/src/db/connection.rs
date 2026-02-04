@@ -65,10 +65,18 @@ impl Database {
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL UNIQUE,
                 color TEXT NOT NULL,
-                created_at INTEGER NOT NULL
+                parent_id TEXT,
+                is_pinned INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY (parent_id) REFERENCES tags(id) ON DELETE SET NULL
             )",
             [],
         )?;
+
+        // 确保 parent_id 列存在 (简单迁移)
+        let _ = conn.execute("ALTER TABLE tags ADD COLUMN parent_id TEXT", []);
+        // 确保 is_pinned 列存在 (简单迁移)
+        let _ = conn.execute("ALTER TABLE tags ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0", []);
 
         // 创建任务标签关联表
         conn.execute(

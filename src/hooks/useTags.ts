@@ -13,7 +13,8 @@ export function useCreateTag() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ name, color }: { name: string; color: string }) => tagService.createTag(name, color),
+        mutationFn: ({ name, color, parentId }: { name: string; color: string; parentId?: string | null }) => 
+            tagService.createTag(name, color, parentId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tags'] });
         },
