@@ -2,9 +2,9 @@ import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useU
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link } from 'lucide-react';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Minus, Paperclip, Workflow, Link2 } from 'lucide-react';
 import { Priority, Task } from '../../types';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import SubtaskItem from './SubtaskItem';
 import DatePicker from '../Common/DatePicker';
 import { useLists } from '../../hooks/useLists';
@@ -59,7 +59,28 @@ export default function TaskDetail() {
   const originalTitleRef = useRef('');
   const titleInputRef = useRef<HTMLInputElement>(null);
 
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [descriptionValue, setDescriptionValue] = useState('');
+  const [isSlashMenuOpen, setIsSlashMenuOpen] = useState(false);
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+  const slashMenuRef = useRef<HTMLDivElement>(null);
+
   const toggleTask = useToggleTask();
+
+  const slashMenuItems = useMemo(() => [
+    { icon: Heading1, label: '一级标题', section: 'text' },
+    { icon: Heading2, label: '二级标题', section: 'text' },
+    { icon: Heading3, label: '三级标题', section: 'text' },
+    { icon: List, label: '无序列表', section: 'list' },
+    { icon: ListOrdered, label: '有序列表', section: 'list' },
+    { icon: CheckSquare, label: '检查项', section: 'list' },
+    { icon: Quote, label: '引用', section: 'other' },
+    { icon: Minus, label: '水平分割线', section: 'other' },
+    { icon: Paperclip, label: '附件', section: 'action' },
+    { icon: Workflow, label: '子任务', section: 'action' },
+    { icon: Hash, label: '标签', section: 'action' },
+    { icon: Link2, label: '关联任务/笔记', section: 'action' },
+  ], []);
 
   const getPriorityClass = (priority: Priority) => {
     switch (priority) {
@@ -196,24 +217,89 @@ export default function TaskDetail() {
       }
 
       // 更多菜单 Popover
-      if (
-        isMoreMenuOpen &&
-        moreMenuRef.current &&
-        !moreMenuRef.current.contains(target) &&
-        moreMenuTriggerRef.current &&
-        !moreMenuTriggerRef.current.contains(target)
-      ) {
-        setIsMoreMenuOpen(false);
-      }
-    };
+    if (
+      isMoreMenuOpen &&
+      moreMenuRef.current &&
+      !moreMenuRef.current.contains(target) &&
+      moreMenuTriggerRef.current &&
+      !moreMenuTriggerRef.current.contains(target)
+    ) {
+      setIsMoreMenuOpen(false);
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isTagPopoverOpen, isPriorityPopoverOpen, isDatePickerOpen, isMoreMenuOpen]);
+    // Slash 菜单 Popover
+    if (
+      isSlashMenuOpen &&
+      slashMenuRef.current &&
+      !slashMenuRef.current.contains(target)
+    ) {
+      setIsSlashMenuOpen(false);
+    }
+  };
 
-  // 本地子任务状态，用于流畅的拖放响应
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside);
+  };
+}, [isTagPopoverOpen, isPriorityPopoverOpen, isDatePickerOpen, isMoreMenuOpen, isSlashMenuOpen]);
+
+useEffect(() => {
+  if (task && !isEditingDescription) {
+    setDescriptionValue(task.description || '');
+  }
+}, [task?.description, isEditingDescription]);
+
+useEffect(() => {
+  if (isEditingDescription) {
+    descriptionInputRef.current?.focus();
+  }
+}, [isEditingDescription]);
+
+const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const newValue = e.target.value;
+  setDescriptionValue(newValue);
+  
+  // 检查是否输入了 /
+  if (newValue.endsWith('/')) {
+    setIsSlashMenuOpen(true);
+  } else if (isSlashMenuOpen) {
+    setIsSlashMenuOpen(false);
+  }
+};
+
+const handleDescriptionBlur = () => {
+  // 延迟关闭编辑模式，以便点击 Slash 菜单
+  setTimeout(() => {
+    if (task && descriptionValue !== (task.description || '')) {
+      updateTask.mutate({
+        ...task,
+        description: descriptionValue
+      });
+    }
+    setIsEditingDescription(false);
+  }, 200);
+};
+
+const handleSlashItemClick = (label: string) => {
+  console.log('Selected slash item:', label);
+  
+  if (label === '标签') {
+    // 呼出标签 Popover
+    setIsTagPopoverOpen(true);
+    setIsSlashMenuOpen(false);
+  } else {
+    // 这里可以根据 label 实现具体的功能，目前先关闭菜单
+    setIsSlashMenuOpen(false);
+  }
+  
+  // 移除最后的 / 并聚焦回输入框
+  if (descriptionValue.endsWith('/')) {
+    setDescriptionValue(prev => prev.slice(0, -1));
+  }
+  descriptionInputRef.current?.focus();
+};
+
+// 本地子任务状态，用于流畅的拖放响应
   const [localSubtasks, setLocalSubtasks] = useState<Task[]>([]);
 
   useEffect(() => {
@@ -607,18 +693,58 @@ export default function TaskDetail() {
         )}
 
         {/* 描述区域 */}
-        <div className="space-y-2">
+        <div className="space-y-2 relative">
           <div className="flex items-center gap-2 text-[12px] font-bold text-gray-400 uppercase tracking-tighter">
             <AlignLeft className="w-3.5 h-3.5" />
             <span>描述</span>
           </div>
-          <div className="min-h-[60px] p-2 -mx-2 hover:bg-gray-50 rounded-md transition-colors cursor-text group">
-            {task.description ? (
-              <p className="text-[13px] text-gray-700 leading-relaxed">{task.description}</p>
+          <div 
+            className={`min-h-[60px] p-2 -mx-2 hover:bg-gray-50 rounded-md transition-colors cursor-text group ${isEditingDescription ? 'bg-white' : ''}`}
+            onClick={() => setIsEditingDescription(true)}
+          >
+            {isEditingDescription ? (
+              <textarea
+                ref={descriptionInputRef}
+                value={descriptionValue}
+                onChange={handleDescriptionChange}
+                onBlur={handleDescriptionBlur}
+                placeholder="输入内容或使用 / 快速插入"
+                className="w-full min-h-[100px] bg-transparent outline-none text-[13px] text-gray-700 leading-relaxed resize-none placeholder:text-gray-300"
+              />
+            ) : task.description ? (
+              <p className="text-[13px] text-gray-700 leading-relaxed whitespace-pre-wrap">{task.description}</p>
             ) : (
               <p className="text-[13px] text-gray-300 italic">点此添加详细描述...</p>
             )}
           </div>
+
+          {/* Slash Context Menu */}
+          {isSlashMenuOpen && (
+            <div 
+              ref={slashMenuRef}
+              className="absolute left-0 top-full mt-1 w-48 bg-white border border-gray-100 shadow-2xl rounded-xl py-1.5 z-[60] animate-in fade-in zoom-in-95 duration-100"
+            >
+              <div className="overflow-y-auto custom-scrollbar">
+                {slashMenuItems.map((item, index) => {
+                  const showDivider = index > 0 && slashMenuItems[index-1].section !== item.section;
+                  return (
+                    <div key={item.label}>
+                      {showDivider && <div className="h-[1px] bg-gray-50 my-1 mx-2" />}
+                      <button
+                        onClick={() => handleSlashItemClick(item.label)}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-left group"
+                      >
+                        <div className="w-6 h-6 flex items-center justify-center rounded-md bg-gray-50 group-hover:bg-white border border-transparent group-hover:border-gray-100 transition-all">
+                          <item.icon className="w-3.5 h-3.5 text-gray-500 group-hover:text-[#1890FF]" />
+                        </div>
+                        <span className="text-[12px] text-gray-600 group-hover:text-gray-900">{item.label}</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 标签展示区 - 移动到描述下方 */}
@@ -670,7 +796,9 @@ export default function TaskDetail() {
                   >
                     <div className="text-[11px] font-bold text-gray-400 px-2 py-1 uppercase tracking-tighter border-b border-gray-50 mb-1">选择标签</div>
                     <div className="max-h-48 overflow-y-auto">
-                      {(allTags || []).map(tag => (
+                      {(allTags || [])
+                        .filter(tag => !task.tags?.includes(tag.id))
+                        .map(tag => (
                         <div
                           key={tag.id}
                           onClick={() => handleToggleTag(tag.id)}
@@ -680,13 +808,12 @@ export default function TaskDetail() {
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#CBD5E0' }} />
                             <span className="text-[13px] text-gray-700">{tag.name}</span>
                           </div>
-                          {Array.isArray(task.tags) && task.tags.includes(tag.id) && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#1890FF]" />
-                          )}
                         </div>
                       ))}
-                      {(!allTags || allTags.length === 0) && (
-                        <div className="px-2 py-4 text-center text-xs text-gray-400 italic">暂无可用标签</div>
+                      {(!allTags || allTags.filter(tag => !task.tags?.includes(tag.id)).length === 0) && (
+                        <div className="px-2 py-4 text-center text-xs text-gray-400 italic">
+                          {!allTags || allTags.length === 0 ? '暂无可用标签' : '所有标签已添加'}
+                        </div>
                       )}
                     </div>
                   </div>
