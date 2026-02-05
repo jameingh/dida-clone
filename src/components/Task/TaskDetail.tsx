@@ -2,10 +2,12 @@ import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useU
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2 } from 'lucide-react';
-import { Priority, Task } from '../../types';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight } from 'lucide-react';
+import { Priority, Task, List } from '../../types';
 import { useState, useEffect, useRef } from 'react';
 import SubtaskItem from './SubtaskItem';
+import DatePicker from '../Common/DatePicker';
+import { useLists } from '../../hooks/useLists';
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -30,18 +32,27 @@ export default function TaskDetail() {
   const { data: task, isLoading } = useTask(selectedTaskId || '');
   const { data: subtasks } = useSubtasks(selectedTaskId || '');
   const { data: allTags } = useTags();
+  const { data: allLists } = useLists();
   const createSubtask = useCreateSubtaskSimple();
   const updateTaskOrders = useUpdateTaskOrders();
   const updateTask = useUpdateTask();
   const undoDeleteTask = useUndoDeleteTask();
   const deleteTaskPermanently = useDeleteTaskPermanently();
+  const deleteTask = useDeleteTask();
   const [newSubtaskTitle, setNewTaskTitle] = useState('');
 
   const isTrashView = selectedListId === 'smart_trash';
 
   const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
+  const [isPriorityPopoverOpen, setIsPriorityPopoverOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  
   const tagPopoverRef = useRef<HTMLDivElement>(null);
   const tagTriggerRef = useRef<HTMLDivElement>(null);
+  const priorityPopoverRef = useRef<HTMLDivElement>(null);
+  const priorityTriggerRef = useRef<HTMLButtonElement>(null);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+  const dateTriggerRef = useRef<HTMLDivElement>(null);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState('');
@@ -116,9 +127,10 @@ export default function TaskDetail() {
     setIsEditingTitle(false);
   };
 
-  // 点击外部关闭标签 Popover
+  // 点击外部关闭 Popover
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // 标签 Popover
       if (
         isTagPopoverOpen &&
         tagPopoverRef.current &&
@@ -128,13 +140,35 @@ export default function TaskDetail() {
       ) {
         setIsTagPopoverOpen(false);
       }
+      
+      // 优先级 Popover
+      if (
+        isPriorityPopoverOpen &&
+        priorityPopoverRef.current &&
+        !priorityPopoverRef.current.contains(event.target as Node) &&
+        priorityTriggerRef.current &&
+        !priorityTriggerRef.current.contains(event.target as Node)
+      ) {
+        setIsPriorityPopoverOpen(false);
+      }
+
+      // 日期选择器 Popover
+      if (
+        isDatePickerOpen &&
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target as Node) &&
+        dateTriggerRef.current &&
+        !dateTriggerRef.current.contains(event.target as Node)
+      ) {
+        setIsDatePickerOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isTagPopoverOpen]);
+  }, [isTagPopoverOpen, isPriorityPopoverOpen, isDatePickerOpen]);
 
   // 本地子任务状态，用于流畅的拖放响应
   const [localSubtasks, setLocalSubtasks] = useState<Task[]>([]);
@@ -198,6 +232,36 @@ export default function TaskDetail() {
     });
   };
 
+  const handlePriorityChange = (priority: Priority) => {
+    if (!task) return;
+    updateTask.mutate({ ...task, priority });
+    setIsPriorityPopoverOpen(false);
+  };
+
+  const handleDateChange = (timestamp: number | undefined) => {
+    if (!task) return;
+    updateTask.mutate({
+      ...task,
+      due_date: timestamp || null
+    });
+    setIsDatePickerOpen(false);
+  };
+
+  const handleToggleComplete = () => {
+    if (!task) return;
+    updateTask.mutate({
+      ...task,
+      completed: !task.completed
+    });
+  };
+
+  const handleDelete = () => {
+    if (task) {
+      deleteTask.mutate(task.id);
+      setSelectedTaskId(null);
+    }
+  };
+
   const handleRestore = () => {
     if (task) {
       undoDeleteTask.mutate(task.id);
@@ -218,6 +282,31 @@ export default function TaskDetail() {
         }
       });
     }
+  };
+
+  const formatDate = (timestamp: number | null) => {
+    if (!timestamp) return '设置日期';
+    const date = new Date(timestamp * 1000);
+    const now = new Date();
+    
+    // 格式化日期部分
+    let dateStr = '';
+    if (date.getFullYear() === now.getFullYear()) {
+      dateStr = `${date.getMonth() + 1}月${date.getDate()}日`;
+    } else {
+      dateStr = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+
+    // 检查是否有时间部分（如果小时和分钟都是0，且后端约定00:00表示没设置时间，则不显示）
+    // 但在滴答清单中，如果用户设置了时间，就会显示。
+    // 我们这里简单判断：如果不是 00:00，就显示时间
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    if (hours !== 0 || minutes !== 0) {
+      dateStr += ` ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+    
+    return dateStr;
   };
 
   if (!selectedTaskId) {
@@ -244,44 +333,162 @@ export default function TaskDetail() {
   return (
     <div className="w-96 border-l border-gray-200 bg-white flex flex-col relative">
       {/* 头部 */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-100 mb-2">
-        <div className="flex items-center gap-2">
-          <div className={`w-3 h-3 rounded-full ${task.priority === Priority.High ? 'bg-red-500' :
-            task.priority === Priority.Medium ? 'bg-orange-500' :
-              task.priority === Priority.Low ? 'bg-blue-500' : 'bg-gray-300'
-            }`} />
-          <h2 className="text-[14px] font-bold text-gray-500 uppercase tracking-wider">任务详情</h2>
+      <div className="flex items-center justify-between p-2 border-b border-gray-100 h-12">
+        <div className="flex items-center gap-1">
+          {/* 日期选择器 */}
+          <div className="relative">
+            <div
+              ref={dateTriggerRef}
+              onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+              className="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
+            >
+              <Calendar className={`w-4 h-4 ${task.due_date ? 'text-[#1890FF]' : 'text-gray-400'}`} />
+              <span className={`text-[13px] font-medium ${task.due_date ? 'text-gray-700' : 'text-gray-400'}`}>
+                {formatDate(task.due_date)}
+              </span>
+            </div>
+            {isDatePickerOpen && (
+              <div ref={datePickerRef} className="absolute top-full left-0 mt-1 z-50">
+                <DatePicker
+                  selectedDate={task.due_date || undefined}
+                  onSelect={handleDateChange}
+                />
+              </div>
+            )}
+          </div>
         </div>
-        <button
-          onClick={() => setSelectedTaskId(null)}
-          className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-        >
-          <X className="w-5 h-5 text-gray-400" />
-        </button>
+
+        <div className="flex items-center gap-1">
+          {/* 优先级 */}
+          <div className="relative">
+            <button
+              ref={priorityTriggerRef}
+              type="button"
+              onClick={() => setIsPriorityPopoverOpen(!isPriorityPopoverOpen)}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+              title="设置优先级"
+            >
+              <Flag className={`w-4 h-4 ${task.priority === Priority.High ? 'text-red-500 fill-red-500' :
+                task.priority === Priority.Medium ? 'text-orange-500 fill-orange-500' :
+                  task.priority === Priority.Low ? 'text-blue-500 fill-blue-500' : 'text-gray-400'
+                }`} />
+            </button>
+            {isPriorityPopoverOpen && (
+              <div
+                ref={priorityPopoverRef}
+                className="absolute top-full right-0 mt-1 w-32 bg-white border border-gray-100 shadow-xl rounded-lg p-1 z-50"
+              >
+                {[
+                  { value: Priority.High, label: '高优先级', color: 'text-red-500' },
+                  { value: Priority.Medium, label: '中优先级', color: 'text-orange-500' },
+                  { value: Priority.Low, label: '低优先级', color: 'text-blue-500' },
+                  { value: Priority.None, label: '无优先级', color: 'text-gray-400' },
+                ].map((p) => (
+                  <div
+                    key={p.value}
+                    onClick={() => handlePriorityChange(p.value)}
+                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 rounded-md cursor-pointer transition-colors"
+                  >
+                    <Flag className={`w-3.5 h-3.5 ${p.color} ${task.priority === p.value ? 'fill-current' : ''}`} />
+                    <span className="text-[12px] text-gray-700">{p.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button 
+            type="button"
+            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <MoreHorizontal className="w-4 h-4 text-gray-400" />
+          </button>
+          
+          <button
+            onClick={() => setSelectedTaskId(null)}
+            type="button"
+            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
-        {/* 标题 */}
-        <div>
-          {isEditingTitle && !isTrashView ? (
-            <input
-              ref={titleInputRef}
-              type="text"
-              value={editTitleValue}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              onBlur={handleTitleSave}
-              onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
-              className="w-full text-[18px] font-bold text-gray-800 leading-snug outline-none border-b-2 border-[#1890FF] pb-1 bg-transparent"
-            />
-          ) : (
-            <h3 
-              onClick={handleTitleStartEdit}
-              className={`text-[18px] font-bold text-gray-800 leading-snug ${isTrashView ? 'text-gray-400 cursor-default' : 'cursor-text hover:bg-gray-50 -mx-1 px-1 rounded transition-colors'}`}
-              title={isTrashView ? '' : "点击修改标题"}
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+        {/* 标题与标签 */}
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <button
+              onClick={handleToggleComplete}
+              className={`mt-1 flex-shrink-0 transition-colors ${task.completed ? 'text-[#1890FF]' : 'text-gray-300 hover:text-gray-400'
+                }`}
             >
-              {task.title || (isEditingTitle ? '' : '无标题任务')}
-            </h3>
-          )}
+              {task.completed ? (
+                <CheckSquare className="w-5 h-5" />
+              ) : (
+                <Square className="w-5 h-5" />
+              )}
+            </button>
+            <div className="flex-1 min-w-0">
+              {isEditingTitle && !isTrashView ? (
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={editTitleValue}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  onBlur={handleTitleSave}
+                  onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
+                  className="w-full text-[18px] font-bold text-gray-800 leading-snug outline-none bg-transparent"
+                />
+              ) : (
+                <h3
+                  onClick={handleTitleStartEdit}
+                  className={`text-[18px] font-bold text-gray-800 leading-snug break-words ${isTrashView ? 'text-gray-400 cursor-default' : 'cursor-text hover:bg-gray-50 -mx-1 px-1 rounded transition-colors'
+                    } ${task.completed ? 'line-through text-gray-400' : ''}`}
+                  title={isTrashView ? '' : "点击修改标题"}
+                >
+                  {task.title || (isEditingTitle ? '' : '无标题任务')}
+                </h3>
+              )}
+            </div>
+          </div>
+
+          {/* 标签区 - 移到标题下方 */}
+          <div className="flex flex-wrap items-center gap-2 pl-8">
+            {Array.isArray(task.tags) && task.tags.map(tagId => {
+              const tagInfo = (allTags || []).find(t => t.id === tagId);
+              return (
+                <span
+                  key={tagId}
+                  className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px] group cursor-default"
+                >
+                  <Hash className="w-3 h-3 mr-0.5 opacity-60" />
+                  {tagInfo?.name || tagId}
+                  {!isTrashView && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleTag(tagId);
+                      }}
+                      className="ml-1 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                </span>
+              );
+            })}
+            {!isTrashView && (
+              <button
+                ref={tagTriggerRef}
+                onClick={() => setIsTagPopoverOpen(!isTagPopoverOpen)}
+                className="inline-flex items-center px-1.5 py-0.5 text-gray-400 hover:text-[#1890FF] hover:bg-blue-50 rounded transition-colors"
+                title="添加标签"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 垃圾桶视图下的操作按钮 */}
@@ -354,61 +561,33 @@ export default function TaskDetail() {
             </form>
           )}
         </div>
+      </div>
 
-        {/* 设置属性 (日期, 优先级, 标签) */}
-        <div className={`pt-4 border-t border-gray-50 space-y-4 pb-8 ${isTrashView ? 'pointer-events-none opacity-60' : ''}`}>
-          <div className="flex items-center justify-between text-[13px]">
-            <div className="flex items-center gap-2 text-gray-400">
-              <Calendar className="w-4 h-4" />
-              <span>日期</span>
-            </div>
-            <div className="font-medium text-gray-700">
-              {task.due_date ? new Date(task.due_date * 1000).toLocaleDateString() : '未设置'}
-            </div>
+      {/* 底部工具栏 */}
+      <div className="flex items-center justify-between p-3 border-t border-gray-100 bg-white h-12">
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          {/* 所属清单 */}
+          <div className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors max-w-[150px]">
+            <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+            <span className="text-[12px] text-gray-500 truncate">
+              {allLists?.find(l => l.id === task.list_id)?.name || '收集箱'}
+            </span>
+            <ChevronRight className="w-3 h-3 text-gray-300" />
           </div>
+        </div>
 
-          <div className="flex items-center justify-between text-[13px]">
-            <div className="flex items-center gap-2 text-gray-400">
-              <Flag className="w-4 h-4" />
-              <span>优先级</span>
-            </div>
-            <div className="flex gap-1">
-              {[Priority.None, Priority.Low, Priority.Medium, Priority.High].map((p) => (
-                <div
-                  key={p}
-                  className={`w-4 h-4 rounded-sm border ${task.priority === p
-                    ? 'border-[#1890FF] bg-[#E6F7FF]'
-                    : 'border-gray-200'
-                    }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-start justify-between text-[13px]">
-            <div
-              ref={tagTriggerRef}
-              onClick={() => setIsTagPopoverOpen(!isTagPopoverOpen)}
-              className="flex items-center gap-2 text-gray-400 mt-1 cursor-pointer hover:text-gray-600 transition-colors"
-            >
-              <Hash className="w-4 h-4" />
-              <span>标签</span>
-            </div>
-            <div className="flex flex-wrap justify-end gap-1.5 flex-1 pl-4">
-              {Array.isArray(task.tags) && task.tags.map(tagId => {
-                const tagInfo = (allTags || []).find(t => t.id === tagId);
-                return (
-                  <span
-                    key={tagId}
-                    onClick={() => handleToggleTag(tagId)}
-                    className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-[11px] hover:bg-red-50 hover:text-red-500 cursor-pointer transition-colors"
-                  >
-                    {tagInfo?.name || tagId}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-gray-400">
+          <span className="text-[11px] italic">
+            创建于 {task.created_at ? new Date(task.created_at * 1000).toLocaleDateString() : ''}
+          </span>
+          <div className="h-3 w-[1px] bg-gray-200 mx-1" />
+          <button
+            onClick={handleDelete}
+            className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md transition-colors"
+            title="删除任务"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -416,7 +595,7 @@ export default function TaskDetail() {
       {isTagPopoverOpen && (
         <div
           ref={tagPopoverRef}
-          className="absolute bottom-24 right-6 w-48 bg-white border border-gray-100 shadow-xl rounded-lg p-2 z-50"
+          className="absolute bottom-14 left-6 w-48 bg-white border border-gray-100 shadow-xl rounded-lg p-2 z-50"
         >
           <div className="text-[11px] font-bold text-gray-400 px-2 py-1 uppercase tracking-tighter border-b border-gray-50 mb-1">选择标签</div>
           <div className="max-h-48 overflow-y-auto">
@@ -441,11 +620,6 @@ export default function TaskDetail() {
           </div>
         </div>
       )}
-
-      {/* 底部信息 */}
-      <div className="p-4 bg-gray-50/50 text-[11px] text-gray-400 border-t border-gray-100 italic">
-        创建于 {task.created_at ? new Date(task.created_at * 1000).toLocaleString() : '未知'}
-      </div>
     </div>
   );
 }

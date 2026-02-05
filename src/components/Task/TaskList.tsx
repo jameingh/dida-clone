@@ -69,18 +69,19 @@ export default function TaskList() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInputValue, setTitleInputValue] = useState('');
   
-  // 当切换标签时，重置标题输入框和预设标签
+  // 当切换标签或列表时，重置标题输入框和预设标签
   useEffect(() => {
+    // 只有在真的切换了 ID 且不是因为点击日期选择器等操作导致的重新渲染时才重置
     if (selectedTagId && allTags) {
       const tag = allTags.find(t => t.id === selectedTagId);
       if (tag) {
-        setTitleInputValue(tag.name);
-        setNewTaskTags([selectedTagId]); // 切换标签时，默认选中当前标签
+        // setTitleInputValue(tag.name); // 这行可能是干扰，因为它和 newTaskTitle 逻辑混淆了
+        setNewTaskTags([selectedTagId]);
       }
     } else {
       setNewTaskTags([]);
     }
-  }, [selectedTagId, allTags]);
+  }, [selectedTagId]); // 减少依赖项，只在 ID 变化时触发
 
   const handleTitleSave = () => {
     if (selectedTagId && allTags && titleInputValue.trim()) {
@@ -121,17 +122,19 @@ export default function TaskList() {
   // 点击外部关闭弹层
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      
+      if (datePickerRef.current && !datePickerRef.current.contains(target)) {
         setShowDatePicker(false);
       }
-      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(target)) {
         setShowMoreMenu(false);
       }
     };
 
     if (showDatePicker || showMoreMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside, true); // 使用捕获阶段，防止某些冒泡被阻止的情况
+      return () => document.removeEventListener('mousedown', handleClickOutside, true);
     }
   }, [showDatePicker, showMoreMenu]);
 
@@ -146,7 +149,19 @@ export default function TaskList() {
   };
 
   const handleAddTask = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+    if (e) {
+      e.preventDefault();
+      // 检查当前是否有正在进行的点击/交互可能导致了误触
+      // 特别是 DatePicker 内部的按钮点击不应该触发此表单提交
+      const activeElement = document.activeElement;
+      if (activeElement && (
+        activeElement.closest('.date-picker-container') || 
+        datePickerRef.current?.contains(activeElement)
+      )) {
+        console.log('Prevented accidental task submission from DatePicker interaction');
+        return;
+      }
+    }
     if (newTaskTitle.trim()) {
       // 如果没有 selectedListId，默认为收集箱 (inbox)
       const listId = selectedListId || 'smart_inbox';
@@ -348,6 +363,11 @@ export default function TaskList() {
                   type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
+                  onBlur={(e) => {
+                    // 如果点击的是日期选择器或更多菜单，不应该导致标题消失
+                    // 实际上这里并没有代码导致消失，但我们可以增加防御性日志
+                    console.log('Task input blurred, current title:', newTaskTitle);
+                  }}
                   placeholder="添加任务... (输入 #添加标签)"
                   className="flex-1 bg-transparent text-[14px] text-gray-700 outline-none placeholder:text-gray-400"
                 />

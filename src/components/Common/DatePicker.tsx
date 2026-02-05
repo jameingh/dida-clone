@@ -58,7 +58,11 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
     // 点击外部隐藏时间列表
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (timeListRef.current && !timeListRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            // 检查点击是否在时间列表之外，且不在小时/分钟输入框之内
+            const isInsideInput = hourInputRef.current?.contains(target) || minuteInputRef.current?.contains(target);
+            
+            if (timeListRef.current && !timeListRef.current.contains(target) && !isInsideInput) {
                 setShowTimeList(false);
             }
         };
@@ -208,7 +212,7 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
     const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
     return (
-        <div className="w-[280px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.15)] rounded-xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+        <div className="w-[280px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.15)] rounded-xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200 date-picker-container">
             {/* Tab 切换 */}
             <div className="flex p-1 bg-gray-50/50 border-b border-gray-100">
                 <button
@@ -323,7 +327,9 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
                 {/* 时间选择行 */}
                 <div className="relative">
                     <button 
-                        onClick={() => {
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
                             if (!isTimeSet) {
                                 setIsTimeSet(true);
                                 setShowTimeList(true);
@@ -336,12 +342,21 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
                         <div className="flex items-center gap-3">
                             <Clock className={`w-4 h-4 ${isTimeSet ? 'text-[#1890FF]' : 'text-gray-400 group-hover:text-gray-600'}`} />
                             {isTimeSet ? (
-                                <div className="flex items-center bg-blue-50 px-2 py-0.5 rounded border border-blue-100" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center bg-blue-50 px-2 py-0.5 rounded border border-blue-100" onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                }}>
                                     <input
                                         ref={hourInputRef}
                                         type="text"
                                         value={selectedTime.hour.toString().padStart(2, '0')}
                                         onChange={handleHourChange}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            }
+                                        }}
                                         className="w-5 bg-transparent text-[13px] font-medium text-center outline-none"
                                     />
                                     <span className="mx-0.5 text-[13px]">:</span>
@@ -350,6 +365,12 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
                                         type="text"
                                         value={selectedTime.minute.toString().padStart(2, '0')}
                                         onChange={handleMinuteChange}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            }
+                                        }}
                                         className="w-5 bg-transparent text-[13px] font-medium text-center outline-none"
                                     />
                                 </div>
@@ -363,6 +384,7 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
                                     className="w-4 h-4 text-gray-300 hover:text-gray-500 cursor-pointer" 
                                     onClick={(e: React.MouseEvent) => {
                                         e.stopPropagation();
+                                        e.preventDefault();
                                         setIsTimeSet(false);
                                         setShowTimeList(false);
                                     }}
@@ -384,8 +406,12 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
                                 return (
                                     <button
                                         key={`${hour}:${minute}`}
+                                        type="button"
                                         data-selected={isSelected}
-                                        onClick={() => handleTimeSelect(hour, minute)}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handleTimeSelect(hour, minute);
+                                        }}
                                         className={`w-full px-4 py-2 text-left text-[13px] hover:bg-gray-50 transition-colors flex items-center justify-between ${isSelected ? 'text-[#1890FF] bg-blue-50/50' : 'text-gray-600'}`}
                                     >
                                         <span>{`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`}</span>
@@ -398,7 +424,11 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
                 </div>
 
                 {/* 提醒行 */}
-                <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors">
+                <button 
+                    type="button"
+                    onClick={(e) => e.preventDefault()}
+                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors"
+                >
                     <div className="flex items-center gap-3 text-gray-600 group-hover:text-gray-900">
                         <Bell className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                         <span className="text-[13px]">提醒</span>
@@ -412,7 +442,11 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
                 </button>
 
                 {/* 重复行 */}
-                <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors">
+                <button 
+                    type="button"
+                    onClick={(e) => e.preventDefault()}
+                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors"
+                >
                     <div className="flex items-center gap-3 text-gray-600 group-hover:text-gray-900">
                         <RefreshCw className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                         <span className="text-[13px]">重复</span>
