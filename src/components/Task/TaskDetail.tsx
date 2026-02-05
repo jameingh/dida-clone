@@ -273,6 +273,8 @@ export default function TaskDetail() {
       ...task,
       tags: newTags
     });
+    // 选择标签后自动关闭弹窗
+    setIsTagPopoverOpen(false);
   };
 
   const handlePriorityChange = (priority: Priority) => {
@@ -558,7 +560,7 @@ export default function TaskDetail() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-        {/* 标题与标签 */}
+        {/* 标题 */}
         <div className="space-y-3">
           <div className="flex-1 min-w-0">
             {isEditingTitle && !isTrashView ? (
@@ -580,43 +582,6 @@ export default function TaskDetail() {
               >
                 {task.title || (isEditingTitle ? '' : '无标题任务')}
               </h3>
-            )}
-          </div>
-
-          {/* 标签区 - 移到标题下方 */}
-          <div className="flex flex-wrap items-center gap-2 pl-8">
-            {Array.isArray(task.tags) && task.tags.map(tagId => {
-              const tagInfo = (allTags || []).find(t => t.id === tagId);
-              return (
-                <span
-                  key={tagId}
-                  className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px] group cursor-default"
-                >
-                  <Hash className="w-3 h-3 mr-0.5 opacity-60" />
-                  {tagInfo?.name || tagId}
-                  {!isTrashView && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleTag(tagId);
-                      }}
-                      className="ml-1 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-2.5 h-2.5" />
-                    </button>
-                  )}
-                </span>
-              );
-            })}
-            {!isTrashView && (
-              <button
-                ref={tagTriggerRef}
-                onClick={() => setIsTagPopoverOpen(!isTagPopoverOpen)}
-                className="inline-flex items-center px-1.5 py-0.5 text-gray-400 hover:text-[#1890FF] hover:bg-blue-50 rounded transition-colors"
-                title="添加标签"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
             )}
           </div>
         </div>
@@ -655,6 +620,84 @@ export default function TaskDetail() {
             )}
           </div>
         </div>
+
+        {/* 标签展示区 - 移动到描述下方 */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-[12px] font-bold text-gray-400 uppercase tracking-tighter">
+            <Hash className="w-3.5 h-3.5" />
+            <span>标签</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 relative">
+            {Array.isArray(task.tags) && task.tags.map(tagId => {
+              const tagInfo = (allTags || []).find(t => t.id === tagId);
+              return (
+                <span
+                  key={tagId}
+                  className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px] group cursor-default"
+                >
+                  <Hash className="w-3 h-3 mr-0.5 opacity-60" />
+                  {tagInfo?.name || tagId}
+                  {!isTrashView && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleTag(tagId);
+                      }}
+                      className="ml-1 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                </span>
+              );
+            })}
+            {!isTrashView && (
+              <>
+                <button
+                  ref={tagTriggerRef}
+                  onClick={() => setIsTagPopoverOpen(!isTagPopoverOpen)}
+                  className="inline-flex items-center px-1.5 py-0.5 text-gray-400 hover:text-[#1890FF] hover:bg-blue-50 rounded transition-colors"
+                  title="添加标签"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+
+                {/* 标签简易选择器 Popover - 移动到按钮旁边 */}
+                {isTagPopoverOpen && (
+                  <div
+                    ref={tagPopoverRef}
+                    className="absolute bottom-full left-0 mb-2 w-48 bg-white border border-gray-100 shadow-xl rounded-lg p-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                  >
+                    <div className="text-[11px] font-bold text-gray-400 px-2 py-1 uppercase tracking-tighter border-b border-gray-50 mb-1">选择标签</div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {(allTags || []).map(tag => (
+                        <div
+                          key={tag.id}
+                          onClick={() => handleToggleTag(tag.id)}
+                          className="flex items-center justify-between px-2 py-1.5 hover:bg-[#F0F7FF] rounded-md cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#CBD5E0' }} />
+                            <span className="text-[13px] text-gray-700">{tag.name}</span>
+                          </div>
+                          {Array.isArray(task.tags) && task.tags.includes(tag.id) && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#1890FF]" />
+                          )}
+                        </div>
+                      ))}
+                      {(!allTags || allTags.length === 0) && (
+                        <div className="px-2 py-4 text-center text-xs text-gray-400 italic">暂无可用标签</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 分割线 */}
+        <div className="h-[1px] bg-gray-100 -mx-6" />
 
         {/* 子任务区域 */}
         <div className="space-y-2">
@@ -723,36 +766,6 @@ export default function TaskDetail() {
           </button>
         </div>
       </div>
-
-      {/* 标签简易选择器 Popover */}
-      {isTagPopoverOpen && (
-        <div
-          ref={tagPopoverRef}
-          className="absolute bottom-14 left-6 w-48 bg-white border border-gray-100 shadow-xl rounded-lg p-2 z-50"
-        >
-          <div className="text-[11px] font-bold text-gray-400 px-2 py-1 uppercase tracking-tighter border-b border-gray-50 mb-1">选择标签</div>
-          <div className="max-h-48 overflow-y-auto">
-            {(allTags || []).map(tag => (
-              <div
-                key={tag.id}
-                onClick={() => handleToggleTag(tag.id)}
-                className="flex items-center justify-between px-2 py-1.5 hover:bg-[#F0F7FF] rounded-md cursor-pointer transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#CBD5E0' }} />
-                  <span className="text-[13px] text-gray-700">{tag.name}</span>
-                </div>
-                {Array.isArray(task.tags) && task.tags.includes(tag.id) && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#1890FF]" />
-                )}
-              </div>
-            ))}
-            {(!allTags || allTags.length === 0) && (
-              <div className="px-2 py-4 text-center text-xs text-gray-400 italic">暂无可用标签</div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
