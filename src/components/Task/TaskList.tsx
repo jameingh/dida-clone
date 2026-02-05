@@ -536,8 +536,8 @@ export default function TaskList() {
           onDragEnd={handleDragEnd}
           modifiers={[restrictToVerticalAxis]}
         >
-          <SortableContext items={localTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-            {/* 未完成任务 */}
+          {/* 未完成任务区域 - 仅该区域支持拖拽排序 */}
+          <SortableContext items={incompleteTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
             <div>
               {incompleteTasks.map((task) => (
                 (isTrashView || isCompletedView) ? (
@@ -547,25 +547,25 @@ export default function TaskList() {
                 )
               ))}
             </div>
-
-            {/* 已完成任务 */}
-            {completedTasks.length > 0 && (
-              <div className="mt-8">
-                <div className="px-4 py-2 text-[12px] font-bold text-gray-400">
-                  已完成 ({completedTasks.length})
-                </div>
-                <div>
-                  {completedTasks.map((task) => (
-                    (isTrashView || isCompletedView) ? (
-                      <TaskItem key={task.id} task={task} />
-                    ) : (
-                      <TaskTreeItem key={task.id} task={task} />
-                    )
-                  ))}
-                </div>
-              </div>
-            )}
           </SortableContext>
+
+          {/* 已完成任务区域 - 不参与拖拽排序上下文 */}
+          {completedTasks.length > 0 && (
+            <div className="mt-8">
+              <div className="px-4 py-2 text-[12px] font-bold text-gray-400">
+                已完成 ({completedTasks.length})
+              </div>
+              <div>
+                {completedTasks.map((task) => (
+                  (isTrashView || isCompletedView) ? (
+                    <TaskItem key={task.id} task={task} />
+                  ) : (
+                    <TaskTreeItem key={task.id} task={task} />
+                  )
+                ))}
+              </div>
+            </div>
+          )}
         </DndContext>
 
         {localTasks.length === 0 && (
