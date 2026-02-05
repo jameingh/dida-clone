@@ -61,6 +61,31 @@ export default function TaskDetail() {
 
   const toggleTask = useToggleTask();
 
+  const getPriorityClass = (priority: Priority) => {
+    switch (priority) {
+      case Priority.High: return 'priority-high';
+      case Priority.Medium: return 'priority-medium';
+      case Priority.Low: return 'priority-low';
+      default: return 'priority-none';
+    }
+  };
+
+  const getPriorityColorVar = (priority: Priority) => {
+    switch (priority) {
+      case Priority.High: return 'var(--priority-high)';
+      case Priority.Medium: return 'var(--priority-medium)';
+      case Priority.Low: return 'var(--priority-low)';
+      default: return 'var(--priority-none)';
+    }
+  };
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (task) {
+      toggleTask.mutate(task.id);
+    }
+  };
+
   useEffect(() => {
     if (task && !isEditingTitle) {
       console.log('TaskDetail sync task title:', task.id, task.title);
@@ -265,11 +290,6 @@ export default function TaskDetail() {
     setIsDatePickerOpen(false);
   };
 
-  const handleToggleComplete = () => {
-    if (!task) return;
-    toggleTask.mutate(task.id);
-  };
-
   const handleDelete = () => {
     if (task) {
       deleteTask.mutate(task.id);
@@ -349,7 +369,23 @@ export default function TaskDetail() {
     <div className="w-96 border-l border-gray-200 bg-white flex flex-col relative">
       {/* 头部 */}
       <div className="flex items-center justify-between p-2 border-b border-gray-100 h-12">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {/* 滴答清单风格 Checkbox */}
+          <div className="flex-shrink-0 flex items-center justify-center pl-1">
+            <div
+              onClick={handleToggle}
+              className={`dida-checkbox ${getPriorityClass(task.priority)} ${task.completed ? 'completed' : ''}`}
+              style={{
+                borderColor: getPriorityColorVar(task.priority),
+                backgroundColor: task.completed
+                  ? getPriorityColorVar(task.priority)
+                  : 'color-mix(in srgb, ' + getPriorityColorVar(task.priority) + ' 18%, #ffffff 82%)',
+                width: '18px',
+                height: '18px',
+              }}
+            />
+          </div>
+
           {/* 日期选择器 */}
           <div className="relative">
             <button
@@ -413,12 +449,103 @@ export default function TaskDetail() {
             )}
           </div>
 
-          <button 
-            type="button"
-            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
-          >
-            <MoreHorizontal className="w-4 h-4 text-gray-400" />
-          </button>
+          <div className="relative">
+            <button 
+              ref={moreMenuTriggerRef}
+              type="button"
+              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+              className={`p-1.5 hover:bg-gray-100 rounded-md transition-colors ${isMoreMenuOpen ? 'bg-gray-100 text-gray-600' : ''}`}
+              title="更多"
+            >
+              <MoreHorizontal className={`w-4 h-4 ${isMoreMenuOpen ? 'text-gray-600' : 'text-gray-400'}`} />
+            </button>
+
+            {/* 更多操作菜单 */}
+            {isMoreMenuOpen && (
+              <div
+                ref={moreMenuRef}
+                className="absolute top-full right-0 mt-1 w-56 bg-white border border-gray-100 shadow-xl rounded-xl py-1.5 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+              >
+                <div className="px-1.5 space-y-0.5">
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Plus className="w-4 h-4 text-gray-400" />
+                    <span>添加子任务</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Link className="w-4 h-4 text-gray-400" />
+                    <span>关联主任务</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <ArrowUpToLine className="w-4 h-4 text-gray-400" />
+                    <span>置顶</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Archive className="w-4 h-4 text-gray-400" />
+                    <span>放弃</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Hash className="w-4 h-4 text-gray-400" />
+                    <span>标签</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Plus className="w-4 h-4 text-gray-400" />
+                    <span>上传附件</span>
+                  </button>
+                  
+                  <div className="h-[1px] bg-gray-50 my-1 mx-2" />
+                  
+                  <button type="button" className="w-full flex items-center justify-between px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <Play className="w-4 h-4 text-gray-400" />
+                      <span>开始专注</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+                  </button>
+                  
+                  <div className="h-[1px] bg-gray-50 my-1 mx-2" />
+                  
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <History className="w-4 h-4 text-gray-400" />
+                    <span>任务动态</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Save className="w-4 h-4 text-gray-400" />
+                    <span>保存为模板</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Copy className="w-4 h-4 text-gray-400" />
+                    <span>创建副本</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Link className="w-4 h-4 text-gray-400" />
+                    <span>复制链接</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <FileText className="w-4 h-4 text-gray-400" />
+                    <span>转换为笔记</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Printer className="w-4 h-4 text-gray-400" />
+                    <span>打印</span>
+                  </button>
+                  
+                  <div className="h-[1px] bg-gray-50 my-1 mx-2" />
+                  
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      handleDelete();
+                      setIsMoreMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>删除</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           
           <button
             onClick={() => setSelectedTaskId(null)}
@@ -433,40 +560,27 @@ export default function TaskDetail() {
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
         {/* 标题与标签 */}
         <div className="space-y-3">
-          <div className="flex items-start gap-3">
-            <button
-              onClick={handleToggleComplete}
-              className={`mt-1 flex-shrink-0 transition-colors ${task.completed ? 'text-[#1890FF]' : 'text-gray-300 hover:text-gray-400'
-                }`}
-            >
-              {task.completed ? (
-                <CheckSquare className="w-5 h-5" />
-              ) : (
-                <Square className="w-5 h-5" />
-              )}
-            </button>
-            <div className="flex-1 min-w-0">
-              {isEditingTitle && !isTrashView ? (
-                <input
-                  ref={titleInputRef}
-                  type="text"
-                  value={editTitleValue}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  onBlur={handleTitleSave}
-                  onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
-                  className="w-full text-[18px] font-bold text-gray-800 leading-snug outline-none bg-transparent"
-                />
-              ) : (
-                <h3
-                  onClick={handleTitleStartEdit}
-                  className={`text-[18px] font-bold text-gray-800 leading-snug break-words ${isTrashView ? 'text-gray-400 cursor-default' : 'cursor-text hover:bg-gray-50 -mx-1 px-1 rounded transition-colors'
-                    } ${task.completed ? 'line-through text-gray-400' : ''}`}
-                  title={isTrashView ? '' : "点击修改标题"}
-                >
-                  {task.title || (isEditingTitle ? '' : '无标题任务')}
-                </h3>
-              )}
-            </div>
+          <div className="flex-1 min-w-0">
+            {isEditingTitle && !isTrashView ? (
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={editTitleValue}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
+                className="w-full text-[18px] font-bold text-gray-800 leading-snug outline-none bg-transparent"
+              />
+            ) : (
+              <h3
+                onClick={handleTitleStartEdit}
+                className={`text-[18px] font-bold text-gray-800 leading-snug break-words ${isTrashView ? 'text-gray-400 cursor-default' : 'cursor-text hover:bg-gray-50 -mx-1 px-1 rounded transition-colors'
+                  } ${task.completed ? 'line-through text-gray-400' : ''}`}
+                title={isTrashView ? '' : "点击修改标题"}
+              >
+                {task.title || (isEditingTitle ? '' : '无标题任务')}
+              </h3>
+            )}
           </div>
 
           {/* 标签区 - 移到标题下方 */}
@@ -607,103 +721,6 @@ export default function TaskDetail() {
           >
             <MessageSquare className="w-4 h-4 text-gray-400" />
           </button>
-          <div className="relative">
-            <button
-              ref={moreMenuTriggerRef}
-              type="button"
-              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-              className={`p-1.5 hover:bg-gray-100 rounded-md transition-colors ${isMoreMenuOpen ? 'bg-gray-100 text-gray-600' : ''}`}
-              title="更多"
-            >
-              <MoreHorizontal className={`w-4 h-4 ${isMoreMenuOpen ? 'text-gray-600' : 'text-gray-400'}`} />
-            </button>
-
-            {/* 更多操作菜单 */}
-            {isMoreMenuOpen && (
-              <div
-                ref={moreMenuRef}
-                className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-100 shadow-xl rounded-xl py-1.5 z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
-              >
-                <div className="px-1.5 space-y-0.5">
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <Plus className="w-4 h-4 text-gray-400" />
-                    <span>添加子任务</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <Link className="w-4 h-4 text-gray-400" />
-                    <span>关联主任务</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <ArrowUpToLine className="w-4 h-4 text-gray-400" />
-                    <span>置顶</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <Archive className="w-4 h-4 text-gray-400" />
-                    <span>放弃</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <Hash className="w-4 h-4 text-gray-400" />
-                    <span>标签</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <Plus className="w-4 h-4 text-gray-400" />
-                    <span>上传附件</span>
-                  </button>
-                  
-                  <div className="h-[1px] bg-gray-50 my-1 mx-2" />
-                  
-                  <button type="button" className="w-full flex items-center justify-between px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <Play className="w-4 h-4 text-gray-400" />
-                      <span>开始专注</span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-                  </button>
-                  
-                  <div className="h-[1px] bg-gray-50 my-1 mx-2" />
-                  
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <History className="w-4 h-4 text-gray-400" />
-                    <span>任务动态</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <Save className="w-4 h-4 text-gray-400" />
-                    <span>保存为模板</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <Copy className="w-4 h-4 text-gray-400" />
-                    <span>创建副本</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <Link className="w-4 h-4 text-gray-400" />
-                    <span>复制链接</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <FileText className="w-4 h-4 text-gray-400" />
-                    <span>转换为笔记</span>
-                  </button>
-                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-                    <Printer className="w-4 h-4 text-gray-400" />
-                    <span>打印</span>
-                  </button>
-                  
-                  <div className="h-[1px] bg-gray-50 my-1 mx-2" />
-                  
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      handleDelete();
-                      setIsMoreMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>删除</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
