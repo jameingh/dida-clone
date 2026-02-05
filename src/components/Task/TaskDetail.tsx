@@ -1,9 +1,9 @@
-import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useUpdateTask, useUndoDeleteTask, useDeleteTaskPermanently, useDeleteTask } from '../../hooks/useTasks';
+import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useUpdateTask, useUndoDeleteTask, useDeleteTaskPermanently, useDeleteTask, useToggleTask } from '../../hooks/useTasks';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, RefreshCw } from 'lucide-react';
-import { Priority, Task, List } from '../../types';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link } from 'lucide-react';
+import { Priority, Task } from '../../types';
 import { useState, useEffect, useRef } from 'react';
 import SubtaskItem from './SubtaskItem';
 import DatePicker from '../Common/DatePicker';
@@ -48,16 +48,18 @@ export default function TaskDetail() {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   
   const tagPopoverRef = useRef<HTMLDivElement>(null);
-  const tagTriggerRef = useRef<HTMLDivElement>(null);
+  const tagTriggerRef = useRef<HTMLButtonElement>(null);
   const priorityPopoverRef = useRef<HTMLDivElement>(null);
   const priorityTriggerRef = useRef<HTMLButtonElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
-  const dateTriggerRef = useRef<HTMLDivElement>(null);
+  const dateTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState('');
   const originalTitleRef = useRef('');
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleTask = useToggleTask();
 
   useEffect(() => {
     if (task && !isEditingTitle) {
@@ -265,10 +267,7 @@ export default function TaskDetail() {
 
   const handleToggleComplete = () => {
     if (!task) return;
-    updateTask.mutate({
-      ...task,
-      completed: !task.completed
-    });
+    toggleTask.mutate(task.id);
   };
 
   const handleDelete = () => {
@@ -353,8 +352,9 @@ export default function TaskDetail() {
         <div className="flex items-center gap-1">
           {/* 日期选择器 */}
           <div className="relative">
-            <div
+            <button
               ref={dateTriggerRef}
+              type="button"
               onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
               className="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
             >
@@ -362,7 +362,7 @@ export default function TaskDetail() {
               <span className={`text-[13px] font-medium ${task.due_date ? 'text-gray-700' : 'text-gray-400'}`}>
                 {formatDate(task.due_date)}
               </span>
-            </div>
+            </button>
             {isDatePickerOpen && (
               <div ref={datePickerRef} className="absolute top-full left-0 mt-1 z-50">
                 <DatePicker

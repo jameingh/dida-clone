@@ -101,5 +101,20 @@ pub async fn empty_trash(state: State<'_, AppState>) -> Result<()> {
 pub async fn toggle_task(task_id: String, state: State<'_, AppState>) -> Result<Task> {
     let mut task = TaskRepository::get_by_id(&state.db, &task_id)?;
     task.toggle_completed();
-    TaskRepository::update(&state.db, &task)
+    let updated_task = TaskRepository::update(&state.db, &task)?;
+
+    // 如果父任务被完成，则同步完成所有未完成的子任务
+    if updated_task.completed {
+        let subtasks = TaskRepository::get_by_parent(&state.db, &task_id)?;
+        for mut subtask in subtasks {
+            if !subtask.completed {
+                subtask.completed = true;
+                subtask.completed_at = updated_task.completed_at;
+                subtask.updated_at = updated_task.updated_at;
+                TaskRepository::update(&state.db, &subtask)?;
+            }
+        }
+    }
+
+    Ok(updated_task)
 }

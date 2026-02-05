@@ -255,6 +255,18 @@ const browserTaskStore = {
       completed_at: completed ? now : null,
     };
     tasks[idx] = updated;
+
+    // 如果父任务被完成，则同步完成所有未完成的子任务
+    if (completed) {
+      tasks.forEach(t => {
+        if (t.parent_id === taskId && !t.completed) {
+          t.completed = true;
+          t.completed_at = now;
+          t.updated_at = now;
+        }
+      });
+    }
+
     saveBrowserTasks(tasks);
     return updated;
   },

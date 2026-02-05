@@ -215,6 +215,11 @@ export function useToggleTask() {
         });
       }
 
+      // 如果是完成操作，可能影响了子任务状态，需要失效该任务的子任务查询
+      if (updatedTask.completed) {
+        queryClient.invalidateQueries({ queryKey: ['subtasks', updatedTask.id] });
+      }
+
       // 仍然失效相关查询以确保数据最终一致性，但现在我们有了即时的缓存更新
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['subtasks'] });
