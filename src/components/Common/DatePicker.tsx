@@ -41,7 +41,7 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
             const date = new Date(selectedDate * 1000);
             return { hour: date.getHours(), minute: date.getMinutes() };
         }
-        return { hour: 9, minute: 0 }; // 默认早上9点
+        return { hour: 21, minute: 0 }; // 默认初始值为 21:00
     });
     const [tempSelectedDate, setTempSelectedDate] = useState<Date>(
         selectedDate ? new Date(selectedDate * 1000) : new Date()
@@ -80,6 +80,20 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
             }
         }
     }, [showTimeList]);
+
+    // 当设置时间显示时，自动聚焦到小时输入框
+    useEffect(() => {
+        if (isTimeSet) {
+            // 使用 setTimeout 确保输入框已渲染并可见
+            const timer = setTimeout(() => {
+                if (hourInputRef.current) {
+                    hourInputRef.current.focus();
+                    hourInputRef.current.select();
+                }
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [isTimeSet]);
 
     // 快捷选项
     const quickOptions = [
@@ -309,7 +323,14 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
                 {/* 时间选择行 */}
                 <div className="relative">
                     <button 
-                        onClick={() => setShowTimeList(!showTimeList)}
+                        onClick={() => {
+                            if (!isTimeSet) {
+                                setIsTimeSet(true);
+                                setShowTimeList(true);
+                            } else {
+                                setShowTimeList(!showTimeList);
+                            }
+                        }}
                         className={`w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors ${isTimeSet ? 'text-[#1890FF]' : 'text-gray-600'}`}
                     >
                         <div className="flex items-center gap-3">
