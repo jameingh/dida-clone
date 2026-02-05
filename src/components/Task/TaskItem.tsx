@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Task, Priority } from '../../types';
-import { useToggleTask, useUpdateTask, useDeleteTask, useUndoDeleteTask, useDeleteTaskPermanently } from '../../hooks/useTasks';
+import { useToggleTask, useUpdateTask, useDeleteTask, useUndoDeleteTask, useDeleteTaskPermanently, useCreateSubtaskSimple } from '../../hooks/useTasks';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { Calendar, GripVertical, MoreHorizontal, Trash2, RotateCcw, XCircle } from 'lucide-react';
+import { GripVertical, MoreHorizontal, Trash2, RotateCcw, XCircle, ListTodo } from 'lucide-react';
 import { format } from 'date-fns';
 import ContextMenu, { ContextMenuItem, ContextMenuSeparator } from '../Common/ContextMenu';
 import { useSortable } from '@dnd-kit/sortable';
@@ -12,14 +12,16 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface TaskItemProps {
   task: Task;
+  depth?: number;
 }
 
-export default function TaskItem({ task }: TaskItemProps) {
+export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const toggleTask = useToggleTask();
   const deleteTask = useDeleteTask();
   const undoDeleteTask = useUndoDeleteTask();
   const deleteTaskPermanently = useDeleteTaskPermanently();
   const updateTask = useUpdateTask();
+  const createSubtask = useCreateSubtaskSimple();
   const { data: allTags } = useTags();
   const { selectedTaskId, setSelectedTaskId, showToast, selectedListId } = useAppStore();
   const { showAlert } = useAlertStore();
@@ -49,6 +51,8 @@ export default function TaskItem({ task }: TaskItemProps) {
     e.stopPropagation();
     toggleTask.mutate(task.id);
   };
+
+  console.log('Rendering TaskItem:', task.id, task.title);
 
   const handleClick = () => {
     // 如果正在拖拽，不触发点击
@@ -105,6 +109,19 @@ export default function TaskItem({ task }: TaskItemProps) {
     setMenuPos(null);
   };
 
+  const handleAddSubtask = () => {
+    createSubtask.mutate({
+      title: '',
+      parentId: task.id,
+      listId: task.list_id,
+    }, {
+      onSuccess: (newSubtask) => {
+        setSelectedTaskId(newSubtask.id);
+      }
+    });
+    setMenuPos(null);
+  };
+
   const getPriorityClass = (priority: Priority) => {
     switch (priority) {
       case Priority.High: return 'priority-high';
@@ -128,7 +145,10 @@ export default function TaskItem({ task }: TaskItemProps) {
     <>
       <div
         ref={setNodeRef}
-        style={style}
+        style={{
+          ...style,
+          paddingLeft: `${depth * 20}px`
+        }}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         className={`group flex items-center gap-1 px-1 py-1.5 border-b border-gray-50 cursor-pointer transition-colors ${isSelected ? 'bg-[#F0F7FF]' : 'hover:bg-[#FAFAFA]'
@@ -165,7 +185,7 @@ export default function TaskItem({ task }: TaskItemProps) {
             className={`text-[14px] leading-tight truncate ${task.completed ? 'line-through text-gray-400' : 'text-gray-800 font-medium'
               }`}
           >
-            {task.title}
+            {task.title || '无标题任务'}
           </div>
         </div>
 
@@ -276,6 +296,14 @@ export default function TaskItem({ task }: TaskItemProps) {
                 active={task.priority === Priority.None}
                 onClick={() => handleSetPriority(Priority.None)}
                 icon={<div className="w-2 h-2 rounded-full bg-gray-300" />}
+              />
+
+              <ContextMenuSeparator />
+
+              <ContextMenuItem
+                label="添加子任务"
+                onClick={handleAddSubtask}
+                icon={<ListTodo className="w-4 h-4" />}
               />
 
               <ContextMenuSeparator />

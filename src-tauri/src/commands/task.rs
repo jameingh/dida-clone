@@ -47,8 +47,10 @@ pub async fn get_subtasks(parent_id: String, state: State<'_, AppState>) -> Resu
 
 #[tauri::command]
 pub async fn create_subtask_simple(title: String, parent_id: String, list_id: String, state: State<'_, AppState>) -> Result<Task> {
+    let parent_task = TaskRepository::get_by_id(&state.db, &parent_id)?;
     let mut task = Task::new(title, list_id);
     task.parent_id = Some(parent_id);
+    task.due_date = parent_task.due_date;
     TaskRepository::create(&state.db, &task)
 }
 

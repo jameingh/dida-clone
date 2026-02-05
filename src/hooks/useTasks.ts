@@ -87,6 +87,7 @@ export function useCreateSubtaskSimple() {
       taskService.createSubtaskSimple(title, parentId, listId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['subtasks', variables.parentId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }
@@ -171,7 +172,8 @@ export function useToggleTask() {
 
   return useMutation({
     mutationFn: (taskId: string) => taskService.toggleTask(taskId),
-    onSuccess: () => {
+    onSuccess: (updatedTask) => {
+      console.log('Task toggled SUCCESS:', updatedTask.id, updatedTask.title, updatedTask.completed);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['subtasks'] });
       queryClient.invalidateQueries({ queryKey: ['task'] });

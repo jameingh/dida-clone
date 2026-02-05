@@ -1,11 +1,12 @@
-import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useUpdateTask, useUndoDeleteTask, useDeleteTaskPermanently } from '../../hooks/useTasks';
+import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useUpdateTask, useUndoDeleteTask, useDeleteTaskPermanently, useDeleteTask } from '../../hooks/useTasks';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
 import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2 } from 'lucide-react';
-import { Priority } from '../../types';
+import { Priority, Task } from '../../types';
 import { useState, useEffect, useRef } from 'react';
 import SubtaskItem from './SubtaskItem';
+import { useQueryClient } from '@tanstack/react-query';
 
 import {
   DndContext,
@@ -25,6 +26,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 export default function TaskDetail() {
   const { selectedTaskId, setSelectedTaskId, selectedListId } = useAppStore();
   const { showAlert } = useAlertStore();
+  const queryClient = useQueryClient();
   const { data: task, isLoading } = useTask(selectedTaskId || '');
   const { data: subtasks } = useSubtasks(selectedTaskId || '');
   const { data: allTags } = useTags();
@@ -43,18 +45,56 @@ export default function TaskDetail() {
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (task) {
+      console.log('TaskDetail sync task title:', task.id, task.title);
       setEditTitleValue(task.title);
+      // 如果标题为空（如新创建的任务），自动进入编辑模式并聚焦
+      if (task.title === '' && !isTrashView) {
+        setIsEditingTitle(true);
+      }
     }
-  }, [task]);
+  }, [task, isTrashView]);
+
+  useEffect(() => {
+    if (isEditingTitle) {
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+        titleInputRef.current?.select();
+      }, 0);
+    }
+  }, [isEditingTitle]);
+
+  const handleTitleChange = (newTitle: string) => {
+    setEditTitleValue(newTitle);
+    if (task) {
+      // 实时更新本地缓存，实现列表和详情的同步
+      const updatedTask = { ...task, title: newTitle };
+      queryClient.setQueryData(['task', task.id], updatedTask);
+      
+      // 更新主列表缓存
+      queryClient.setQueriesData({ queryKey: ['tasks'] }, (oldData: Task[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(t => t.id === task.id ? updatedTask : t);
+      });
+
+      // 如果是子任务，更新父任务的子任务列表缓存
+      if (task.parent_id) {
+        queryClient.setQueryData(['subtasks', task.parent_id], (oldData: Task[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map(t => t.id === task.id ? updatedTask : t);
+        });
+      }
+    }
+  };
 
   const handleTitleSave = () => {
-    if (task && editTitleValue.trim() && editTitleValue.trim() !== task.title) {
+    if (task && editTitleValue.trim() !== task.title) {
       updateTask.mutate({
         ...task,
-        title: editTitleValue.trim()
+        title: editTitleValue.trim() || '无标题任务' // 防止保存空标题
       });
     }
     setIsEditingTitle(false);
@@ -81,11 +121,13 @@ export default function TaskDetail() {
   }, [isTagPopoverOpen]);
 
   // 本地子任务状态，用于流畅的拖放响应
-  const [localSubtasks, setLocalSubtasks] = useState(subtasks || []);
+  const [localSubtasks, setLocalSubtasks] = useState<Task[]>([]);
 
   useEffect(() => {
     if (subtasks) {
-      setLocalSubtasks(subtasks);
+      // 过滤掉已删除的子任务
+      const filteredSubtasks = subtasks.filter(t => !t.is_deleted);
+      setLocalSubtasks(filteredSubtasks);
     }
   }, [subtasks, selectedTaskId]);
 
@@ -207,10 +249,10 @@ export default function TaskDetail() {
         <div>
           {isEditingTitle && !isTrashView ? (
             <input
-              autoFocus
+              ref={titleInputRef}
               type="text"
               value={editTitleValue}
-              onChange={(e) => setEditTitleValue(e.target.value)}
+              onChange={(e) => handleTitleChange(e.target.value)}
               onBlur={handleTitleSave}
               onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
               className="w-full text-[18px] font-bold text-gray-800 leading-snug outline-none border-b-2 border-[#1890FF] pb-1 bg-transparent"
@@ -226,7 +268,7 @@ export default function TaskDetail() {
               className={`text-[18px] font-bold text-gray-800 leading-snug ${isTrashView ? 'text-gray-400 cursor-default' : 'cursor-text hover:bg-gray-50 -mx-1 px-1 rounded transition-colors'}`}
               title={isTrashView ? '' : "点击修改标题"}
             >
-              {task.title}
+              {task.title || (isEditingTitle ? '' : '无标题任务')}
             </h3>
           )}
         </div>

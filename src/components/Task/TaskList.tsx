@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { Plus, Calendar, ChevronDown, MoreHorizontal, Flag, Hash, X, Check, Trash2 } from 'lucide-react';
-import { useTasks, useCreateTaskExtended, useUpdateTaskOrders, useEmptyTrash } from '../../hooks/useTasks';
+import { useTasks, useCreateTaskExtended, useUpdateTaskOrders, useEmptyTrash, useSubtasks } from '../../hooks/useTasks';
 import { useTags, useCreateTag, useUpdateTag } from '../../hooks/useTags';
 import { useLists } from '../../hooks/useLists';
 import { Task } from '../../types';
@@ -22,6 +22,31 @@ import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
 import TaskItem from './TaskItem';
 import DatePicker from '../Common/DatePicker';
+
+interface TaskTreeItemProps {
+  task: Task;
+  depth?: number;
+}
+
+function TaskTreeItem({ task, depth = 0 }: TaskTreeItemProps) {
+  const { data: subtasks } = useSubtasks(task.id);
+  const incompleteSubtasks = subtasks?.filter(t => !t.is_deleted && !t.completed) || [];
+  const completedSubtasks = subtasks?.filter(t => !t.is_deleted && t.completed) || [];
+
+  return (
+    <div className="flex flex-col">
+      <TaskItem task={task} depth={depth} />
+      {/* 渲染未完成的子任务 */}
+      {incompleteSubtasks.map(subtask => (
+        <TaskTreeItem key={subtask.id} task={subtask} depth={depth + 1} />
+      ))}
+      {/* 渲染已完成的子任务 */}
+      {completedSubtasks.map(subtask => (
+        <TaskTreeItem key={subtask.id} task={subtask} depth={depth + 1} />
+      ))}
+    </div>
+  );
+}
 
 export default function TaskList() {
   const { selectedListId, selectedTagId } = useAppStore();
@@ -79,6 +104,7 @@ export default function TaskList() {
 
   useEffect(() => {
     if (tasks) {
+      console.log('TaskList received tasks:', tasks.length);
       setLocalTasks(tasks);
     }
   }, [tasks]);
@@ -228,10 +254,10 @@ export default function TaskList() {
     updateTaskOrders.mutate(ascendingOrders);
   };
 
-  const incompleteTasks = localTasks.filter((task) => !task.completed);
-  const completedTasks = localTasks.filter((task) => task.completed);
   const isTrashView = selectedListId === 'smart_trash';
   const isCompletedView = selectedListId === 'smart_completed';
+  const incompleteTasks = localTasks.filter((task) => !task.completed && (isTrashView || isCompletedView || !task.parent_id));
+  const completedTasks = localTasks.filter((task) => task.completed && (isTrashView || isCompletedView || !task.parent_id));
   const hideInput = isTrashView || isCompletedView;
 
   // 辅助函数：根据优先级获取颜色已选属性是否存在的标记
@@ -494,7 +520,11 @@ export default function TaskList() {
             {/* 未完成任务 */}
             <div>
               {incompleteTasks.map((task) => (
-                <TaskItem key={task.id} task={task} />
+                (isTrashView || isCompletedView) ? (
+                  <TaskItem key={task.id} task={task} />
+                ) : (
+                  <TaskTreeItem key={task.id} task={task} />
+                )
               ))}
             </div>
 
@@ -506,7 +536,11 @@ export default function TaskList() {
                 </div>
                 <div>
                   {completedTasks.map((task) => (
-                    <TaskItem key={task.id} task={task} />
+                    (isTrashView || isCompletedView) ? (
+                      <TaskItem key={task.id} task={task} />
+                    ) : (
+                      <TaskTreeItem key={task.id} task={task} />
+                    )
                   ))}
                 </div>
               </div>

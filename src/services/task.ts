@@ -177,10 +177,12 @@ const browserTaskStore = {
 
   async createSubtaskSimple(title: string, parentId: string, listId: string): Promise<Task> {
     const tasks = loadBrowserTasks();
+    const parentTask = tasks.find(t => t.id === parentId);
     const finalTask = createBrowserTaskBase({
       title,
       list_id: listId,
       parent_id: parentId,
+      due_date: parentTask?.due_date ?? null,
     });
     tasks.push(finalTask);
     saveBrowserTasks(tasks);
