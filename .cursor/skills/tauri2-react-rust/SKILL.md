@@ -133,8 +133,8 @@ npm run tauri build  # 生产构建
 
 ### 核心流程（通用）
 
-1. **打开页面**：`agent-browser open <url>`
-2. **获取可交互元素**：`agent-browser snapshot -i` → 得到 `@e1`、`@e2` 等引用及类型/文案
+1. **打开页面**：`agent-browser --cdp 9222 open <url>`
+2. **获取可交互元素**：`agent-browser --cdp 9222 snapshot -i` → 得到 `@e1`、`@e2` 等引用及类型/文案
 3. **操作**：用 refs 执行 `click`、`fill`、`select`、`check` 等
 4. **页面变化后**：再次 `snapshot -i` 获取新 refs，再继续操作或断言
 
@@ -143,14 +143,14 @@ npm run tauri build  # 生产构建
 目标：了解要仿造的网站的 DOM 结构、可交互元素、文案与交互路径。
 
 ```bash
-agent-browser open https://目标网站.com/页面
-agent-browser snapshot -i
+agent-browser --cdp 9222 open https://目标网站.com/页面
+agent-browser --cdp 9222 snapshot -i
 # 根据输出识别：导航、列表、表单、按钮等对应 @e1 @e2 ...
 # 需要文案或结构时：
-agent-browser get text @e1
-agent-browser get text body > page.txt
+agent-browser --cdp 9222 get text @e1
+agent-browser --cdp 9222 get text body > page.txt
 # 可选：截图留档
-agent-browser screenshot
+agent-browser --cdp 9222 screenshot
 ```
 
 据此确定组件划分、数据结构与 IPC 设计，再进入开发。
@@ -161,16 +161,16 @@ agent-browser screenshot
 
 ```bash
 # 先启动本地前端（另起终端）：npm run dev 或 npm run tauri dev，记下 URL（如 http://localhost:1420
-agent-browser open http://localhost:1420
-agent-browser snapshot -i
+agent-browser --cdp 9222 open http://localhost:1420
+agent-browser --cdp 9222 snapshot -i
 # 按设计逐项验证：点击侧栏、打开列表、新建任务、填写表单、提交等
-agent-browser click @e1
-agent-browser wait --load networkidle
-agent-browser snapshot -i
-agent-browser fill @e2 "测试任务"
-agent-browser click @e3
+agent-browser --cdp 9222 click @e1
+agent-browser --cdp 9222 wait --load networkidle
+agent-browser --cdp 9222 snapshot -i
+agent-browser --cdp 9222 fill @e2 "测试任务"
+agent-browser --cdp 9222 click @e3
 # 需要时截图或保存页面文本做回归
-agent-browser screenshot
+agent-browser --cdp 9222 screenshot
 ```
 
 Tauri dev 为 `http://localhost:1420` 。
@@ -179,12 +179,12 @@ Tauri dev 为 `http://localhost:1420` 。
 
 | 用途     | 命令 |
 |----------|------|
-| 打开页面 | `agent-browser open <url>` |
-| 可交互元素 | `agent-browser snapshot -i` |
-| 点击/填写 | `agent-browser click @e1`、`agent-browser fill @e2 "内容"` |
-| 等待     | `agent-browser wait --load networkidle`、`agent-browser wait 2000` |
-| 取文案   | `agent-browser get text @e1`、`agent-browser get text body > out.txt` |
-| 截图     | `agent-browser screenshot`、`agent-browser screenshot --full` |
+| 打开页面 | `agent-browser --cdp 9222 open <url>` |
+| 可交互元素 | `agent-browser --cdp 9222 snapshot -i` |
+| 点击/填写 | `agent-browser --cdp 9222 click @e1`、`agent-browser --cdp 9222 fill @e2 "内容"` |
+| 等待     | `agent-browser --cdp 9222 wait --load networkidle`、`agent-browser --cdp 9222 wait 2000` |
+| 取文案   | `agent-browser --cdp 9222 get text @e1`、`agent-browser --cdp 9222 get text body > out.txt` |
+| 截图     | `agent-browser --cdp 9222 screenshot`、`agent-browser --cdp 9222 screenshot --full` |
 
 **注意**：页面跳转或 DOM 更新后必须重新 `snapshot -i`，否则旧 ref 会失效。完整命令与语义定位符见 [agent-browser SKILL](file:///Users/akm/Documents/agent-browser/skills/agent-browser/SKILL.md)。
 
@@ -210,7 +210,7 @@ Tauri dev 为 `http://localhost:1420` 。
 |------------|------|
 | 新建项目   | 架构设计 → 目录与 tauri.conf → 第一个 command + 前端 invoke |
 | 实现功能   | 先定 Rust 模型与 TS 类型 → 命令与 services → 组件与状态 |
-| 调研仿站   | agent-browser open 目标站 → snapshot -i → get text / screenshot，再设计组件与数据 |
-| 验证效果   | 启动本地前端 → agent-browser open localhost → snapshot -i → click/fill 逐项验证 |
+| 调研仿站   | agent-browser --cdp 9222 open 目标站 → snapshot -i → get text / screenshot，再设计组件与数据 |
+| 验证效果   | 启动本地前端 → agent-browser --cdp 9222 open localhost → snapshot -i → click/fill 逐项验证 |
 | 异步操作   | Rust async + spawn_blocking 区分；前端 debounce/批量 |
 | 复杂类型   | 泛型与 trait（Rust）+ 泛型与工具类型（TS）保持一致 |
