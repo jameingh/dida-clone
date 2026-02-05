@@ -49,8 +49,13 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('TaskItem toggling task:', task.id, task.title);
     toggleTask.mutate(task.id);
   };
+
+  if (!task.title && task.title !== '') {
+    console.warn('TaskItem detected missing title:', task.id, task);
+  }
 
   console.log('Rendering TaskItem:', task.id, task.title);
 

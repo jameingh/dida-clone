@@ -17,6 +17,7 @@ export default function SubtaskItem({ subtask }: SubtaskItemProps) {
     const queryClient = useQueryClient();
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(subtask.title);
+    const originalTitleRef = useRef(subtask.title);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Sortable logic
@@ -38,11 +39,12 @@ export default function SubtaskItem({ subtask }: SubtaskItemProps) {
 
     // 同步外部标题变化
     useEffect(() => {
-        console.log('SubtaskItem sync subtask title:', subtask.id, subtask.title);
-        if (subtask.title !== editTitle) {
+        if (!isEditing && subtask.title !== editTitle) {
+            console.log('SubtaskItem sync subtask title:', subtask.id, subtask.title);
             setEditTitle(subtask.title);
+            originalTitleRef.current = subtask.title;
         }
-    }, [subtask.title]);
+    }, [subtask.title, isEditing]);
 
     // 当任务完成时，确保退出编辑模式
     useEffect(() => {
@@ -58,12 +60,19 @@ export default function SubtaskItem({ subtask }: SubtaskItemProps) {
         }
     }, [isEditing]);
 
-    const handleToggle = (e: React.MouseEvent) => {
+    const handleStartEdit = () => {
+        if (subtask.completed || isDragging) return;
+        originalTitleRef.current = subtask.title;
+        setIsEditing(true);
+    };
+
+    const handleToggle = async (e: React.MouseEvent) => {
         e.stopPropagation();
         // 如果正在编辑，先保存或关闭编辑
         if (isEditing) {
-            handleSave();
+            await handleSave();
         }
+        console.log('SubtaskItem toggling task:', subtask.id, subtask.title);
         toggleTask.mutate(subtask.id);
     };
 
@@ -88,9 +97,16 @@ export default function SubtaskItem({ subtask }: SubtaskItemProps) {
         }
     };
 
-    const handleSave = () => {
-        if (editTitle.trim() !== subtask.title) {
-            updateTask.mutate({ ...subtask, title: editTitle.trim() || '无标题子任务' });
+    const handleSave = async () => {
+        const trimmedTitle = editTitle.trim();
+        if (trimmedTitle !== originalTitleRef.current) {
+            console.log('SubtaskItem saving title:', subtask.id, trimmedTitle, 'original:', originalTitleRef.current);
+            try {
+                await updateTask.mutateAsync({ ...subtask, title: trimmedTitle || '无标题子任务' });
+                originalTitleRef.current = trimmedTitle || '无标题子任务';
+            } catch (err) {
+                console.error('SubtaskItem save title failed:', err);
+            }
         }
         setIsEditing(false);
     };
@@ -137,7 +153,7 @@ export default function SubtaskItem({ subtask }: SubtaskItemProps) {
                 )}
             </div>
 
-            <div className="flex-1 min-w-0 px-1" onClick={() => !subtask.completed && !isDragging && setIsEditing(true)}>
+            <div className="flex-1 min-w-0 px-1" onClick={handleStartEdit}>
                 {isEditing ? (
                     <input
                         ref={inputRef}

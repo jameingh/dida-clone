@@ -45,27 +45,39 @@ export default function TaskDetail() {
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState('');
+  const originalTitleRef = useRef('');
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (task) {
+    if (task && !isEditingTitle) {
       console.log('TaskDetail sync task title:', task.id, task.title);
       setEditTitleValue(task.title);
       // 如果标题为空（如新创建的任务），自动进入编辑模式并聚焦
       if (task.title === '' && !isTrashView) {
         setIsEditingTitle(true);
+        originalTitleRef.current = '';
       }
     }
-  }, [task, isTrashView]);
+  }, [task?.id, task?.title, isTrashView, isEditingTitle]);
 
   useEffect(() => {
     if (isEditingTitle) {
-      setTimeout(() => {
-        titleInputRef.current?.focus();
-        titleInputRef.current?.select();
-      }, 0);
+      // 使用 requestAnimationFrame 确保在 DOM 渲染后执行聚焦
+      const timer = requestAnimationFrame(() => {
+        if (titleInputRef.current) {
+          titleInputRef.current.focus();
+          titleInputRef.current.select();
+        }
+      });
+      return () => cancelAnimationFrame(timer);
     }
   }, [isEditingTitle]);
+
+  const handleTitleStartEdit = () => {
+    if (isTrashView) return;
+    originalTitleRef.current = task?.title || '';
+    setIsEditingTitle(true);
+  };
 
   const handleTitleChange = (newTitle: string) => {
     setEditTitleValue(newTitle);
@@ -91,11 +103,15 @@ export default function TaskDetail() {
   };
 
   const handleTitleSave = () => {
-    if (task && editTitleValue.trim() !== task.title) {
+    const trimmedTitle = editTitleValue.trim();
+    if (task && trimmedTitle !== originalTitleRef.current) {
+      console.log('TaskDetail saving title:', task.id, trimmedTitle, 'original:', originalTitleRef.current);
       updateTask.mutate({
         ...task,
-        title: editTitleValue.trim() || '无标题任务' // 防止保存空标题
+        title: trimmedTitle || '无标题任务' // 防止保存空标题
       });
+      // 保存后更新 originalTitleRef，防止重复保存或逻辑错误
+      originalTitleRef.current = trimmedTitle || '无标题任务';
     }
     setIsEditingTitle(false);
   };
@@ -259,12 +275,7 @@ export default function TaskDetail() {
             />
           ) : (
             <h3 
-              onClick={() => {
-                if (!isTrashView) {
-                  setEditTitleValue(task.title);
-                  setIsEditingTitle(true);
-                }
-              }}
+              onClick={handleTitleStartEdit}
               className={`text-[18px] font-bold text-gray-800 leading-snug ${isTrashView ? 'text-gray-400 cursor-default' : 'cursor-text hover:bg-gray-50 -mx-1 px-1 rounded transition-colors'}`}
               title={isTrashView ? '' : "点击修改标题"}
             >

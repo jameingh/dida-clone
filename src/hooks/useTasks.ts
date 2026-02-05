@@ -85,8 +85,18 @@ export function useCreateSubtaskSimple() {
   return useMutation({
     mutationFn: ({ title, parentId, listId }: { title: string; parentId: string; listId: string }) =>
       taskService.createSubtaskSimple(title, parentId, listId),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['subtasks', variables.parentId] });
+    onSuccess: (newSubtask) => {
+      // 立即更新缓存
+      queryClient.setQueryData(['task', newSubtask.id], newSubtask);
+      
+      if (newSubtask.parent_id) {
+        queryClient.setQueryData(['subtasks', newSubtask.parent_id], (oldData: Task[] | undefined) => {
+          if (!oldData) return [newSubtask];
+          return [...oldData, newSubtask];
+        });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['subtasks', newSubtask.parent_id] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
@@ -109,12 +119,25 @@ export function useUpdateTask() {
 
   return useMutation({
     mutationFn: (task: Task) => taskService.updateTask(task),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      if (variables.parent_id) {
-        queryClient.invalidateQueries({ queryKey: ['subtasks', variables.parent_id] });
+    onSuccess: (updatedTask) => {
+      // 立即更新缓存
+      queryClient.setQueryData(['task', updatedTask.id], updatedTask);
+      
+      queryClient.setQueriesData({ queryKey: ['tasks'] }, (oldData: Task[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(t => t.id === updatedTask.id ? updatedTask : t);
+      });
+
+      if (updatedTask.parent_id) {
+        queryClient.setQueryData(['subtasks', updatedTask.parent_id], (oldData: Task[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map(t => t.id === updatedTask.id ? updatedTask : t);
+        });
       }
-      queryClient.invalidateQueries({ queryKey: ['task', variables.id] });
+
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['subtasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task', updatedTask.id] });
     },
   });
 }
@@ -174,9 +197,28 @@ export function useToggleTask() {
     mutationFn: (taskId: string) => taskService.toggleTask(taskId),
     onSuccess: (updatedTask) => {
       console.log('Task toggled SUCCESS:', updatedTask.id, updatedTask.title, updatedTask.completed);
+      
+      // 更新特定任务的缓存，防止标题丢失
+      queryClient.setQueryData(['task', updatedTask.id], updatedTask);
+      
+      // 更新列表中的任务
+      queryClient.setQueriesData({ queryKey: ['tasks'] }, (oldData: Task[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(t => t.id === updatedTask.id ? updatedTask : t);
+      });
+
+      // 如果有父任务，更新父任务的子任务列表
+      if (updatedTask.parent_id) {
+        queryClient.setQueryData(['subtasks', updatedTask.parent_id], (oldData: Task[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map(t => t.id === updatedTask.id ? updatedTask : t);
+        });
+      }
+
+      // 仍然失效相关查询以确保数据最终一致性，但现在我们有了即时的缓存更新
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['subtasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task'] });
+      queryClient.invalidateQueries({ queryKey: ['task', updatedTask.id] });
     },
   });
 }
