@@ -2,7 +2,7 @@ import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useU
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight } from 'lucide-react';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, RefreshCw } from 'lucide-react';
 import { Priority, Task, List } from '../../types';
 import { useState, useEffect, useRef } from 'react';
 import SubtaskItem from './SubtaskItem';
@@ -127,16 +127,21 @@ export default function TaskDetail() {
     setIsEditingTitle(false);
   };
 
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const moreMenuTriggerRef = useRef<HTMLButtonElement>(null);
+
   // 点击外部关闭 Popover
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       // 标签 Popover
       if (
         isTagPopoverOpen &&
         tagPopoverRef.current &&
-        !tagPopoverRef.current.contains(event.target as Node) &&
+        !tagPopoverRef.current.contains(target) &&
         tagTriggerRef.current &&
-        !tagTriggerRef.current.contains(event.target as Node)
+        !tagTriggerRef.current.contains(target)
       ) {
         setIsTagPopoverOpen(false);
       }
@@ -145,9 +150,9 @@ export default function TaskDetail() {
       if (
         isPriorityPopoverOpen &&
         priorityPopoverRef.current &&
-        !priorityPopoverRef.current.contains(event.target as Node) &&
+        !priorityPopoverRef.current.contains(target) &&
         priorityTriggerRef.current &&
-        !priorityTriggerRef.current.contains(event.target as Node)
+        !priorityTriggerRef.current.contains(target)
       ) {
         setIsPriorityPopoverOpen(false);
       }
@@ -156,11 +161,22 @@ export default function TaskDetail() {
       if (
         isDatePickerOpen &&
         datePickerRef.current &&
-        !datePickerRef.current.contains(event.target as Node) &&
+        !datePickerRef.current.contains(target) &&
         dateTriggerRef.current &&
-        !dateTriggerRef.current.contains(event.target as Node)
+        !dateTriggerRef.current.contains(target)
       ) {
         setIsDatePickerOpen(false);
+      }
+
+      // 更多菜单 Popover
+      if (
+        isMoreMenuOpen &&
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(target) &&
+        moreMenuTriggerRef.current &&
+        !moreMenuTriggerRef.current.contains(target)
+      ) {
+        setIsMoreMenuOpen(false);
       }
     };
 
@@ -168,7 +184,7 @@ export default function TaskDetail() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isTagPopoverOpen, isPriorityPopoverOpen, isDatePickerOpen]);
+  }, [isTagPopoverOpen, isPriorityPopoverOpen, isDatePickerOpen, isMoreMenuOpen]);
 
   // 本地子任务状态，用于流畅的拖放响应
   const [localSubtasks, setLocalSubtasks] = useState<Task[]>([]);
@@ -564,30 +580,130 @@ export default function TaskDetail() {
       </div>
 
       {/* 底部工具栏 */}
-      <div className="flex items-center justify-between p-3 border-t border-gray-100 bg-white h-12">
+      <div className="flex items-center justify-between p-3 border-t border-gray-100 bg-white h-12 relative">
         <div className="flex items-center gap-1.5 overflow-hidden">
           {/* 所属清单 */}
           <div className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors max-w-[150px]">
-            <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-            <span className="text-[12px] text-gray-500 truncate">
+            <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
+            <span className="text-[13px] text-gray-500 truncate">
               {allLists?.find(l => l.id === task.list_id)?.name || '收集箱'}
             </span>
-            <ChevronRight className="w-3 h-3 text-gray-300" />
+            <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-gray-400">
-          <span className="text-[11px] italic">
-            创建于 {task.created_at ? new Date(task.created_at * 1000).toLocaleDateString() : ''}
-          </span>
-          <div className="h-3 w-[1px] bg-gray-200 mx-1" />
+        <div className="flex items-center gap-1">
           <button
-            onClick={handleDelete}
-            className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md transition-colors"
-            title="删除任务"
+            type="button"
+            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+            title="排版"
           >
-            <Trash2 className="w-4 h-4" />
+            <Type className="w-4 h-4 text-gray-400" />
           </button>
+          <button
+            type="button"
+            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors relative"
+            title="评论"
+          >
+            <MessageSquare className="w-4 h-4 text-gray-400" />
+          </button>
+          <div className="relative">
+            <button
+              ref={moreMenuTriggerRef}
+              type="button"
+              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+              className={`p-1.5 hover:bg-gray-100 rounded-md transition-colors ${isMoreMenuOpen ? 'bg-gray-100 text-gray-600' : ''}`}
+              title="更多"
+            >
+              <MoreHorizontal className={`w-4 h-4 ${isMoreMenuOpen ? 'text-gray-600' : 'text-gray-400'}`} />
+            </button>
+
+            {/* 更多操作菜单 */}
+            {isMoreMenuOpen && (
+              <div
+                ref={moreMenuRef}
+                className="absolute bottom-full right-0 mb-2 w-56 bg-white border border-gray-100 shadow-xl rounded-xl py-1.5 z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
+              >
+                <div className="px-1.5 space-y-0.5">
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Plus className="w-4 h-4 text-gray-400" />
+                    <span>添加子任务</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Link className="w-4 h-4 text-gray-400" />
+                    <span>关联主任务</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <ArrowUpToLine className="w-4 h-4 text-gray-400" />
+                    <span>置顶</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Archive className="w-4 h-4 text-gray-400" />
+                    <span>放弃</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Hash className="w-4 h-4 text-gray-400" />
+                    <span>标签</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Plus className="w-4 h-4 text-gray-400" />
+                    <span>上传附件</span>
+                  </button>
+                  
+                  <div className="h-[1px] bg-gray-50 my-1 mx-2" />
+                  
+                  <button type="button" className="w-full flex items-center justify-between px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <Play className="w-4 h-4 text-gray-400" />
+                      <span>开始专注</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+                  </button>
+                  
+                  <div className="h-[1px] bg-gray-50 my-1 mx-2" />
+                  
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <History className="w-4 h-4 text-gray-400" />
+                    <span>任务动态</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Save className="w-4 h-4 text-gray-400" />
+                    <span>保存为模板</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Copy className="w-4 h-4 text-gray-400" />
+                    <span>创建副本</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Link className="w-4 h-4 text-gray-400" />
+                    <span>复制链接</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <FileText className="w-4 h-4 text-gray-400" />
+                    <span>转换为笔记</span>
+                  </button>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+                    <Printer className="w-4 h-4 text-gray-400" />
+                    <span>打印</span>
+                  </button>
+                  
+                  <div className="h-[1px] bg-gray-50 my-1 mx-2" />
+                  
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      handleDelete();
+                      setIsMoreMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>删除</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
