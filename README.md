@@ -7,6 +7,9 @@
 ![React](https://img.shields.io/badge/React-18-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 
+## 界面预览
+![界面预览](image.png)
+
 ## ✨ 特性
 
 - 🚀 **高性能**：基于 Tauri 框架，使用 Rust 后端，体积小、速度快
