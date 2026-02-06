@@ -39,7 +39,9 @@ impl TaskRepository {
             )?;
         }
 
-        Ok(task.clone())
+        // 重新加载标签，确保返回的 Task 包含真实有效的标签 ID
+        let tags = Self::get_task_tags(&conn, &task.id)?;
+        Ok(Task { tags, ..task.clone() })
     }
 
     pub fn get_by_id(db: &Database, task_id: &str) -> Result<Task> {
@@ -255,7 +257,9 @@ impl TaskRepository {
             )?;
         }
 
-        Ok(task.clone())
+        // 重新加载标签，确保返回的 Task 包含真实有效的标签 ID
+        let tags = Self::get_task_tags(&conn, &task.id)?;
+        Ok(Task { tags, ..task.clone() })
     }
 
     pub fn delete(db: &Database, task_id: &str) -> Result<()> {

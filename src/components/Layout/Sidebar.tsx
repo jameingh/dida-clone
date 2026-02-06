@@ -82,7 +82,7 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
   const handleDeleteTag = (tag: Tag) => {
     showAlert({
       title: '删除标签',
-      message: `确定要删除标签 "${tag.name}" 吗？此操作不可撤销。`,
+      message: `删除后，所有任务中的标签 "${tag.name}" 都将被移除，此操作不可撤销。`,
       type: 'error',
       confirmLabel: '删除',
       onConfirm: () => {
