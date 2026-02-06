@@ -381,7 +381,7 @@ export default function TaskList() {
                     // 实际上这里并没有代码导致消失，但我们可以增加防御性日志
                     console.log('Task input blurred, current title:', newTaskTitle);
                   }}
-                  placeholder="添加任务zhi"
+                  placeholder="添加任务"
                   className="flex-1 bg-transparent text-[14px] text-gray-700 outline-none placeholder:text-gray-400"
                 />
 

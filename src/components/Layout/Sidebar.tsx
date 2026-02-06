@@ -13,7 +13,11 @@ interface TagNode extends Tag {
   children: TagNode[];
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  width?: number;
+}
+
+export default function Sidebar({ width = 240 }: SidebarProps) {
   const { data: lists, isLoading: isListsLoading } = useLists();
   const createList = useCreateList();
   const { data: tags, isLoading: isTagsLoading } = useTags();
@@ -187,14 +191,20 @@ export default function Sidebar() {
   // 只在首次进入应用时显示“加载中”，后续切换保持界面内容不闪烁
   if (isInitialLoading) {
     return (
-      <aside className="w-64 bg-white border-r border-gray-200 p-4">
+      <aside 
+        className="bg-white border-r border-gray-200 p-4 shrink-0"
+        style={{ width: `${width}px` }}
+      >
         <div className="text-sm text-gray-500">加载中...</div>
       </aside>
     );
   }
 
   return (
-    <aside className="w-60 bg-[#FAFAFA] border-r border-gray-200 flex flex-col pt-4 overflow-y-auto">
+    <aside 
+      className="bg-[#FAFAFA] border-r border-gray-200 flex flex-col pt-4 overflow-y-auto shrink-0"
+      style={{ width: `${width}px` }}
+    >
       <div className="flex-1 px-2">
         {/* 置顶标签区域 */}
         {pinnedTags.length > 0 && (
