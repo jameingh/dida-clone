@@ -196,19 +196,47 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
 
         {/* 标签 - 移动到右侧，日期的左边 */}
         {task.tags.length > 0 && (
-          <div className="flex-shrink-0 flex gap-1 px-1">
-            {task.tags.slice(0, 3).map((tagId) => {
+          <div className="flex-shrink-0 flex items-center gap-1 px-1">
+            {task.tags.slice(0, 2).map((tagId) => {
               const tag = allTags?.find(t => t.id === tagId);
               return (
                 <span
                   key={tagId}
-                  className="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-medium"
+                  className="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-medium flex items-center justify-center leading-none"
                   style={tag ? { color: tag.color, backgroundColor: `${tag.color}15` } : undefined}
                 >
                   #{tag?.name || '未知'}
                 </span>
               );
             })}
+            {task.tags.length > 2 && (
+              <div className="relative group/tag flex items-center h-full">
+                <span className="text-[10px] px-1 py-0.5 rounded bg-gray-50 text-gray-400 font-medium border border-gray-100 cursor-default flex items-center justify-center leading-none">
+                  +{task.tags.length - 2}
+                </span>
+                
+                {/* 悬浮显示的隐藏标签列表 */}
+                <div className="absolute bottom-full right-0 mb-2 hidden group-hover/tag:block z-[100] animate-in fade-in zoom-in-95 duration-150">
+                  <div className="bg-white border border-gray-100 shadow-xl rounded-lg p-2 w-max max-w-[300px]">
+                    <div className="flex flex-row flex-wrap gap-1.5">
+                      {task.tags.slice(2).map((tagId) => {
+                        const tag = allTags?.find(t => t.id === tagId);
+                        return (
+                          <div key={tagId} className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-gray-50 border border-gray-100/50 whitespace-nowrap">
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag?.color || '#CBD5E0' }} />
+                            <span className="text-[11px] text-gray-600">
+                              {tag?.name || '未知'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* 小三角箭头 */}
+                    <div className="absolute top-full right-4 w-2 h-2 bg-white border-r border-b border-gray-100 rotate-45 -translate-y-1" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
