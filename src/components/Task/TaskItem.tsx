@@ -131,6 +131,10 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
     setMenuPos(null);
   };
 
+  const handleUpdateTags = (tagIds: string[]) => {
+    updateTask.mutate({ ...task, tags: tagIds });
+  };
+
   const getPriorityClass = (priority: Priority) => {
     switch (priority) {
       case Priority.High: return 'priority-high';
@@ -297,6 +301,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
           onRestore={handleRestore}
           onDeletePermanently={handleDeletePermanently}
           onAddSubtask={handleAddSubtask}
+          onUpdateTags={handleUpdateTags}
         />
       )}
     </>

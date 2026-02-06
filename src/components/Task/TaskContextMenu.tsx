@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Sun, 
   Sunrise, 
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Task, Priority } from '../../types';
 import ContextMenu, { ContextMenuSeparator } from '../Common/ContextMenu';
+import TagSelectorPopover from './TagSelectorPopover';
 
 interface TaskContextMenuProps {
   x: number;
@@ -35,6 +36,7 @@ interface TaskContextMenuProps {
   onRestore?: () => void;
   onDeletePermanently?: () => void;
   onAddSubtask: () => void;
+  onUpdateTags: (tagIds: string[]) => void;
 }
 
 export default function TaskContextMenu({
@@ -48,8 +50,26 @@ export default function TaskContextMenu({
   onDelete,
   onRestore,
   onDeletePermanently,
-  onAddSubtask
+  onAddSubtask,
+  onUpdateTags
 }: TaskContextMenuProps) {
+  const [showTagSelector, setShowTagSelector] = useState(false);
+
+  if (showTagSelector) {
+    return (
+      <ContextMenu x={x} y={y} onClose={onClose}>
+        <TagSelectorPopover
+          selectedTagIds={task.tags || []}
+          onConfirm={(tagIds) => {
+            onUpdateTags(tagIds);
+            onClose();
+          }}
+          onCancel={() => setShowTagSelector(false)}
+        />
+      </ContextMenu>
+    );
+  }
+
   if (isTrashView) {
     return (
       <ContextMenu x={x} y={y} onClose={onClose}>
@@ -160,7 +180,7 @@ export default function TaskContextMenu({
           <MenuItem icon={<ArrowUpToLine className="w-4 h-4" />} label="置顶" onClick={() => {}} />
           <MenuItem icon={<XCircle className="w-4 h-4" />} label="放弃" onClick={() => {}} />
           <MenuItem icon={<FolderInput className="w-4 h-4" />} label="移动到" onClick={() => {}} hasSubmenu />
-          <MenuItem icon={<TagIcon className="w-4 h-4" />} label="标签" onClick={() => {}} hasSubmenu />
+          <MenuItem icon={<TagIcon className="w-4 h-4" />} label="标签" onClick={() => setShowTagSelector(true)} hasSubmenu />
           <MenuItem icon={<Target className="w-4 h-4" />} label="开始专注" onClick={() => {}} hasSubmenu />
           <ContextMenuSeparator />
           <MenuItem icon={<Copy className="w-4 h-4" />} label="创建副本" onClick={() => {}} />
