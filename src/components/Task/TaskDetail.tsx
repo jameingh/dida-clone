@@ -268,36 +268,51 @@ const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 };
 
 const handleDescriptionBlur = () => {
-  // 延迟关闭编辑模式，以便点击 Slash 菜单
-  setTimeout(() => {
-    if (task && descriptionValue !== (task.description || '')) {
-      updateTask.mutate({
-        ...task,
-        description: descriptionValue
-      });
-    }
-    setIsEditingDescription(false);
-  }, 200);
-};
+    // 延迟关闭编辑模式，以便点击 Slash 菜单
+    setTimeout(() => {
+      // 如果 Slash 菜单还开着，不执行保存，因为菜单点击会处理
+      if (isSlashMenuOpen) return;
 
-const handleSlashItemClick = (label: string) => {
-  console.log('Selected slash item:', label);
-  
-  if (label === '标签') {
-    // 呼出标签 Popover
-    setIsTagPopoverOpen(true);
+      if (task && descriptionValue !== (task.description || '')) {
+        updateTask.mutate({
+          ...task,
+          description: descriptionValue
+        });
+      }
+      setIsEditingDescription(false);
+    }, 200);
+  };
+
+  const handleSlashItemClick = (label: string) => {
+    // 1. 立即停止冒泡，防止触发其他事件
+    // 注意：这里没有 event 对象，因为是 button 的 onClick
+    
+    // 2. 计算并更新描述（移除最后的 /）
+    let newDesc = descriptionValue;
+    if (descriptionValue.endsWith('/')) {
+      newDesc = descriptionValue.slice(0, -1);
+      setDescriptionValue(newDesc);
+      
+      // 3. 立即触发一次保存到数据库，确保状态同步
+      if (task) {
+        updateTask.mutate({
+          ...task,
+          description: newDesc
+        });
+      }
+    }
+
+    // 4. 处理具体功能
+    if (label === '标签') {
+      setIsTagPopoverOpen(true);
+    }
+    
+    // 5. 关闭菜单并强制回焦
     setIsSlashMenuOpen(false);
-  } else {
-    // 这里可以根据 label 实现具体的功能，目前先关闭菜单
-    setIsSlashMenuOpen(false);
-  }
-  
-  // 移除最后的 / 并聚焦回输入框
-  if (descriptionValue.endsWith('/')) {
-    setDescriptionValue(prev => prev.slice(0, -1));
-  }
-  descriptionInputRef.current?.focus();
-};
+    setTimeout(() => {
+      descriptionInputRef.current?.focus();
+    }, 0);
+  };
 
 // 本地子任务状态，用于流畅的拖放响应
   const [localSubtasks, setLocalSubtasks] = useState<Task[]>([]);
