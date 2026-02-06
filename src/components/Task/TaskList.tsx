@@ -284,8 +284,25 @@ export default function TaskList() {
 
   const isTrashView = selectedListId === 'smart_trash';
   const isCompletedView = selectedListId === 'smart_completed';
-  const incompleteTasks = localTasks.filter((task) => !task.completed && (isTrashView || isCompletedView || !task.parent_id));
-  const completedTasks = localTasks.filter((task) => task.completed && (isTrashView || isCompletedView || !task.parent_id));
+  const incompleteTasks = localTasks.filter((task) => {
+    if (task.completed) return false;
+    if (isTrashView || isCompletedView) return true;
+    if (selectedTagId) {
+      // 在标签视图下，如果父任务也在当前匹配列表中，则子任务不作为根节点显示，避免重复
+      return !task.parent_id || !localTasks.some(t => t.id === task.parent_id);
+    }
+    return !task.parent_id;
+  });
+
+  const completedTasks = localTasks.filter((task) => {
+    if (!task.completed) return false;
+    if (isTrashView || isCompletedView) return true;
+    if (selectedTagId) {
+      // 同上，避免重复显示
+      return !task.parent_id || !localTasks.some(t => t.id === task.parent_id);
+    }
+    return !task.parent_id;
+  });
   const hideInput = isTrashView || isCompletedView;
 
   // 辅助函数：根据优先级获取颜色已选属性是否存在的标记
