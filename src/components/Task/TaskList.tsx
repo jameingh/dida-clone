@@ -13,7 +13,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { Plus, Calendar, ChevronDown, MoreHorizontal, Flag, Hash, X, Check, Trash2 } from 'lucide-react';
+import { Plus, Calendar, ChevronDown, MoreHorizontal, Flag, Hash, X, Check, Trash2, Inbox, Paperclip, Copy, Settings, ChevronRight } from 'lucide-react';
 import { useTasks, useCreateTaskExtended, useUpdateTaskOrders, useEmptyTrash, useSubtasks } from '../../hooks/useTasks';
 import { useTags, useCreateTag, useUpdateTag } from '../../hooks/useTags';
 import { useLists } from '../../hooks/useLists';
@@ -95,10 +95,14 @@ export default function TaskList() {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showTagMenu, setShowTagMenu] = useState(false);
+  const [showListMenu, setShowListMenu] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const tagMenuRef = useRef<HTMLDivElement>(null);
+  const listMenuRef = useRef<HTMLDivElement>(null);
 
   // 本地排序状态，用于流畅的拖拽响应
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks || []);
@@ -124,11 +128,20 @@ export default function TaskList() {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       
-      if (datePickerRef.current && !datePickerRef.current.contains(target)) {
+      if (showDatePicker && datePickerRef.current && !datePickerRef.current.contains(target)) {
         setShowDatePicker(false);
       }
-      if (moreMenuRef.current && !moreMenuRef.current.contains(target)) {
+      if (showMoreMenu && moreMenuRef.current && !moreMenuRef.current.contains(target)) {
+        // 如果点击的是子菜单，不关闭主菜单
+        if (
+          (tagMenuRef.current && tagMenuRef.current.contains(target)) ||
+          (listMenuRef.current && listMenuRef.current.contains(target))
+        ) {
+          return;
+        }
         setShowMoreMenu(false);
+        setShowTagMenu(false);
+        setShowListMenu(false);
       }
     };
 
@@ -368,83 +381,12 @@ export default function TaskList() {
                     // 实际上这里并没有代码导致消失，但我们可以增加防御性日志
                     console.log('Task input blurred, current title:', newTaskTitle);
                   }}
-                  placeholder="添加任务... (输入 #添加标签)"
+                  placeholder="添加任务zhi"
                   className="flex-1 bg-transparent text-[14px] text-gray-700 outline-none placeholder:text-gray-400"
                 />
 
                 {/* 右侧按钮组 */}
                 <div className="flex items-center gap-1">
-                  {/* 更多按钮 */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowMoreMenu(!showMoreMenu)}
-                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
-
-                    {/* 更多菜单浮层 */}
-                    {showMoreMenu && (
-                      <div ref={moreMenuRef} className="absolute top-full right-0 mt-2 w-64 bg-white shadow-xl rounded-lg border border-gray-100 p-3 z-50 animate-in fade-in zoom-in-95 duration-100">
-                        {/* 优先级选择 */}
-                        <div className="mb-3">
-                          <div className="text-xs font-medium text-gray-500 mb-2">优先级</div>
-                          <div className="flex gap-2">
-                            {[3, 2, 1, 0].map((p) => {
-                              const isSelected = newTaskPriority === (p === 0 ? undefined : p);
-                              return (
-                                <button
-                                  key={p}
-                                  type="button"
-                                  aria-label={p === 0 ? '无优先级' : getPriorityLabel(p) + '优先级'}
-                                  onClick={() => {
-                                    setNewTaskPriority(p === 0 ? undefined : p);
-                                    setShowMoreMenu(false);
-                                    setTimeout(() => inputRef.current?.focus(), 0);
-                                  }}
-                                  className={`flex-1 flex items-center justify-center py-1.5 rounded text-sm hover:bg-gray-50 border transition-all ${isSelected ? 'border-[#1890FF] bg-blue-50' : 'border-transparent'}`}
-                                >
-                                  {p === 0 ? '无' : (
-                                    <Flag className={`w-4 h-4 ${getPriorityColor(p)}`} fill="currentColor" />
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* 标签选择 */}
-                        <div>
-                          <div className="text-xs font-medium text-gray-500 mb-2">标签</div>
-                          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                            {allTags?.map((tag) => {
-                              const isSelected = newTaskTags.includes(tag.id);
-                              return (
-                                <button
-                                  key={tag.id}
-                                  type="button"
-                                  aria-label={'选择标签 ' + tag.name}
-                                  onClick={() => {
-                                    toggleTag(tag.id);
-                                    setTimeout(() => inputRef.current?.focus(), 0);
-                                  }}
-                                  className={`px-2 py-1 text-xs rounded border transition-colors flex items-center gap-1 ${isSelected ? 'bg-blue-50 text-[#1890FF] border-[#1890FF]' : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'}`}
-                                >
-                                  {isSelected && <Check className="w-3 h-3" />}
-                                  {tag.name}
-                                </button>
-                              );
-                            })}
-                            {(!allTags || allTags.length === 0) && (
-                              <div className="text-xs text-gray-400 w-full text-center py-2">暂无标签</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
                   {/* 日期按钮 */}
                   <div className="relative">
                     <button
@@ -473,6 +415,182 @@ export default function TaskList() {
                             setTimeout(() => inputRef.current?.focus(), 0);
                           }}
                         />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 更多按钮 */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowMoreMenu(!showMoreMenu)}
+                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+
+                    {/* 更多菜单浮层 */}
+                    {showMoreMenu && (
+                      <div ref={moreMenuRef} className="absolute top-full right-0 mt-2 w-52 bg-white shadow-xl rounded-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                        {/* 优先级选择 - 顶部行 */}
+                        <div className="px-3 pb-2 mb-1 border-b border-gray-50">
+                          <div className="text-[11px] font-bold text-gray-400 mb-2 uppercase tracking-tighter">优先级</div>
+                          <div className="flex justify-between items-center bg-gray-50 p-1 rounded-lg">
+                            {[3, 2, 1, 0].map((p) => {
+                              const isSelected = newTaskPriority === (p === 0 ? undefined : p);
+                              const priorityColors = {
+                                3: 'text-red-500',
+                                2: 'text-orange-500',
+                                1: 'text-blue-500',
+                                0: 'text-gray-400'
+                              };
+                              return (
+                                <button
+                                  key={p}
+                                  type="button"
+                                  onClick={() => {
+                                    setNewTaskPriority(p === 0 ? undefined : p);
+                                    setShowMoreMenu(false);
+                                    setTimeout(() => inputRef.current?.focus(), 0);
+                                  }}
+                                  className={`flex-1 flex items-center justify-center p-1.5 rounded-md transition-all ${isSelected ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-gray-100'}`}
+                                  title={p === 0 ? '无优先级' : getPriorityLabel(p) + '优先级'}
+                                >
+                                  <Flag className={`w-4 h-4 ${priorityColors[p as keyof typeof priorityColors]}`} fill={isSelected || p === 0 ? 'none' : 'currentColor'} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* 功能列表 */}
+                        <div className="space-y-0.5 px-1 relative">
+                          {/* 切换清单 */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowListMenu(!showListMenu);
+                                setShowTagMenu(false);
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors group ${showListMenu ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Inbox className={`w-4 h-4 ${showListMenu ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'}`} />
+                                <span className={`text-[13px] ${showListMenu ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>
+                                  {lists?.find(l => l.id === (selectedListId || 'inbox'))?.name || '收集箱'}
+                                </span>
+                              </div>
+                              <ChevronRight className={`w-3.5 h-3.5 ${showListMenu ? 'text-blue-400' : 'text-gray-300'}`} />
+                            </button>
+
+                            {showListMenu && (
+                              <div ref={listMenuRef} className="absolute right-full top-0 mr-1 w-48 bg-white shadow-xl rounded-xl border border-gray-100 py-2 z-[60] animate-in fade-in slide-in-from-right-2 duration-150">
+                                <div className="px-3 pb-1 mb-1 border-b border-gray-50">
+                                  <div className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">移动至清单</div>
+                                </div>
+                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                  {lists?.map(list => (
+                                    <button
+                                      key={list.id}
+                                      type="button"
+                                      onClick={() => {
+                                        // 这里实际应该是设置新任务的 list_id，但当前创建任务逻辑是跟随当前视图
+                                        // 为了演示，我们先只关闭菜单，后续可以根据需求增强 createTaskExtended
+                                        setShowListMenu(false);
+                                        setShowMoreMenu(false);
+                                        setTimeout(() => inputRef.current?.focus(), 0);
+                                      }}
+                                      className="w-full flex items-center gap-3 px-3 py-1.5 hover:bg-gray-50 transition-colors text-left"
+                                    >
+                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: list.color || '#1890FF' }} />
+                                      <span className="text-[13px] text-gray-600 truncate">{list.name}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 标签选择 */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowTagMenu(!showTagMenu);
+                                setShowListMenu(false);
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors group ${showTagMenu ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Hash className={`w-4 h-4 ${showTagMenu ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'}`} />
+                                <span className={`text-[13px] ${showTagMenu ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>标签</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {newTaskTags.length > 0 && (
+                                  <span className="text-[11px] bg-blue-100 text-blue-600 px-1.5 rounded-full">{newTaskTags.length}</span>
+                                )}
+                                <ChevronRight className={`w-3.5 h-3.5 ${showTagMenu ? 'text-blue-400' : 'text-gray-300'}`} />
+                              </div>
+                            </button>
+
+                            {showTagMenu && (
+                              <div ref={tagMenuRef} className="absolute right-full top-0 mr-1 w-48 bg-white shadow-xl rounded-xl border border-gray-100 py-2 z-[60] animate-in fade-in slide-in-from-right-2 duration-150">
+                                <div className="px-3 pb-1 mb-1 border-b border-gray-50">
+                                  <div className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">选择标签</div>
+                                </div>
+                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                  {allTags?.map(tag => {
+                                    const isSelected = newTaskTags.includes(tag.id);
+                                    return (
+                                      <button
+                                        key={tag.id}
+                                        type="button"
+                                        onClick={() => toggleTag(tag.id)}
+                                        className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 transition-colors group"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#CBD5E0' }} />
+                                          <span className={`text-[13px] ${isSelected ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>{tag.name}</span>
+                                        </div>
+                                        {isSelected && <Check className="w-3.5 h-3.5 text-blue-500" />}
+                                      </button>
+                                    );
+                                  })}
+                                  {(!allTags || allTags.length === 0) && (
+                                    <div className="px-3 py-4 text-center text-xs text-gray-400 italic">暂无标签</div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-md transition-colors group"
+                          >
+                            <Paperclip className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                            <span className="text-[13px] text-gray-600">附件</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-md transition-colors group"
+                          >
+                            <Copy className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                            <span className="text-[13px] text-gray-600">从模板添加</span>
+                          </button>
+
+                          <div className="h-[1px] bg-gray-50 my-1 mx-2" />
+
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-md transition-colors group"
+                          >
+                            <Settings className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                            <span className="text-[13px] text-gray-600">输入框设置</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
