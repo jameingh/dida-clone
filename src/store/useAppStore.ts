@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Task } from '../types';
 
 interface AppState {
   selectedListId: string | null;
@@ -11,12 +12,14 @@ interface AppState {
     onAction?: () => void;
     visible: boolean;
   };
+  activeReminderTask: Task | null;
   setSelectedListId: (id: string | null) => void;
   setSelectedTagId: (id: string | null) => void;
   setSelectedTaskId: (id: string | null) => void;
   setViewMode: (mode: 'tasks' | 'calendar' | 'search') => void;
   showToast: (message: string, actionLabel?: string, onAction?: () => void) => void;
   hideToast: () => void;
+  setActiveReminderTask: (task: Task | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -28,6 +31,7 @@ export const useAppStore = create<AppState>((set) => ({
     message: '',
     visible: false,
   },
+  activeReminderTask: null,
   setSelectedListId: (id) => set({ 
     selectedListId: id, 
     selectedTagId: null,
@@ -46,4 +50,5 @@ export const useAppStore = create<AppState>((set) => ({
   hideToast: () => set((state) => ({
     toast: { ...state.toast, visible: false }
   })),
+  setActiveReminderTask: (task) => set({ activeReminderTask: task }),
 }));

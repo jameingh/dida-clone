@@ -4,6 +4,7 @@ import TaskList from './components/Task/TaskList';
 import TaskDetail from './components/Task/TaskDetail';
 import Toast from './components/Common/Toast';
 import AlertDialog from './components/Common/AlertDialog';
+import ReminderManager from './components/Task/ReminderManager';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -28,6 +29,7 @@ function App() {
       </MainLayout>
       <Toast />
       <AlertDialog />
+      <ReminderManager />
     </QueryClientProvider>
   );
 }
