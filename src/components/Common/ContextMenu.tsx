@@ -34,7 +34,7 @@ export default function ContextMenu({ x, y, onClose, children }: ContextMenuProp
     return (
         <div
             ref={menuRef}
-            className="fixed z-[9999] bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] py-1.5 w-48 overflow-hidden"
+            className="fixed z-[9999] bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden min-w-[160px]"
             style={{ left: adjustedX, top: adjustedY }}
             onContextMenu={(e) => e.preventDefault()}
         >

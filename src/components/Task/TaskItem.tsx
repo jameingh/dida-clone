@@ -4,11 +4,11 @@ import { useToggleTask, useUpdateTask, useDeleteTask, useUndoDeleteTask, useDele
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { GripVertical, MoreHorizontal, Trash2, RotateCcw, XCircle, ListTodo } from 'lucide-react';
+import { GripVertical, MoreHorizontal, RotateCcw, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import ContextMenu, { ContextMenuItem, ContextMenuSeparator } from '../Common/ContextMenu';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import TaskContextMenu from './TaskContextMenu';
 
 interface TaskItemProps {
   task: Task;
@@ -107,10 +107,14 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
     setMenuPos(null);
   };
 
-  const handleSetDate = (days: number) => {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    updateTask.mutate({ ...task, due_date: Math.floor(date.getTime() / 1000) });
+  const handleSetDate = (days: number | null) => {
+    if (days === null) {
+      updateTask.mutate({ ...task, due_date: null });
+    } else {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      updateTask.mutate({ ...task, due_date: Math.floor(date.getTime() / 1000) });
+    }
     setMenuPos(null);
   };
 
@@ -281,75 +285,19 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
       </div>
 
       {menuPos && (
-        <ContextMenu x={menuPos.x} y={menuPos.y} onClose={() => setMenuPos(null)}>
-          {isTrashView ? (
-            <>
-              <ContextMenuItem
-                label="恢复任务"
-                onClick={handleRestore}
-                icon={<RotateCcw className="w-4 h-4" />}
-              />
-              <ContextMenuItem
-                label="永久删除"
-                danger
-                onClick={handleDeletePermanently}
-                icon={<XCircle className="w-4 h-4" />}
-              />
-            </>
-          ) : (
-            <>
-              <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">截止日期</div>
-              <ContextMenuItem label="今天" onClick={() => handleSetDate(0)} />
-              <ContextMenuItem label="明天" onClick={() => handleSetDate(1)} />
-              <ContextMenuItem label="下周" onClick={() => handleSetDate(7)} />
-
-              <ContextMenuSeparator />
-
-              <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">优先级</div>
-              <ContextMenuItem
-                label="高优先级"
-                active={task.priority === Priority.High}
-                onClick={() => handleSetPriority(Priority.High)}
-                icon={<div className="w-2 h-2 rounded-full bg-red-500" />}
-              />
-              <ContextMenuItem
-                label="中优先级"
-                active={task.priority === Priority.Medium}
-                onClick={() => handleSetPriority(Priority.Medium)}
-                icon={<div className="w-2 h-2 rounded-full bg-orange-500" />}
-              />
-              <ContextMenuItem
-                label="低优先级"
-                active={task.priority === Priority.Low}
-                onClick={() => handleSetPriority(Priority.Low)}
-                icon={<div className="w-2 h-2 rounded-full bg-blue-500" />}
-              />
-              <ContextMenuItem
-                label="无优先级"
-                active={task.priority === Priority.None}
-                onClick={() => handleSetPriority(Priority.None)}
-                icon={<div className="w-2 h-2 rounded-full bg-gray-300" />}
-              />
-
-              <ContextMenuSeparator />
-
-              <ContextMenuItem
-                label="添加子任务"
-                onClick={handleAddSubtask}
-                icon={<ListTodo className="w-4 h-4" />}
-              />
-
-              <ContextMenuSeparator />
-
-              <ContextMenuItem
-                label="删除任务"
-                danger
-                onClick={() => handleDelete()}
-                icon={<Trash2 className="w-4 h-4" />}
-              />
-            </>
-          )}
-        </ContextMenu>
+        <TaskContextMenu
+          x={menuPos.x}
+          y={menuPos.y}
+          task={task}
+          isTrashView={isTrashView}
+          onClose={() => setMenuPos(null)}
+          onSetPriority={handleSetPriority}
+          onSetDate={handleSetDate}
+          onDelete={handleDelete}
+          onRestore={handleRestore}
+          onDeletePermanently={handleDeletePermanently}
+          onAddSubtask={handleAddSubtask}
+        />
       )}
     </>
   );
