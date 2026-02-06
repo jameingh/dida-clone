@@ -1,8 +1,8 @@
 import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useUpdateTask, useUndoDeleteTask, useDeleteTaskPermanently, useDeleteTask, useToggleTask } from '../../hooks/useTasks';
-import { useTags } from '../../hooks/useTags';
+import { useTags, useCreateTag } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Minus, Paperclip, Workflow, Link2 } from 'lucide-react';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Minus, Paperclip, Workflow, Link2, Search } from 'lucide-react';
 import { Priority, Task } from '../../types';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import SubtaskItem from './SubtaskItem';
@@ -32,6 +32,7 @@ export default function TaskDetail() {
   const { data: task, isLoading } = useTask(selectedTaskId || '');
   const { data: subtasks } = useSubtasks(selectedTaskId || '');
   const { data: allTags } = useTags();
+  const createTag = useCreateTag();
   const { data: allLists } = useLists();
   const createSubtask = useCreateSubtaskSimple();
   const updateTaskOrders = useUpdateTaskOrders();
@@ -44,6 +45,8 @@ export default function TaskDetail() {
   const isTrashView = selectedListId === 'smart_trash';
 
   const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
+  const [tagSearchValue, setTagSearchValue] = useState('');
+  const tagSearchInputRef = useRef<HTMLInputElement>(null);
   const [isPriorityPopoverOpen, setIsPriorityPopoverOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   
@@ -362,6 +365,48 @@ const handleDescriptionBlur = () => {
       setNewTaskTitle('');
     }
   };
+
+  const filteredTags = useMemo(() => {
+    if (!allTags) return [];
+    const search = tagSearchValue.toLowerCase().trim();
+    return allTags.filter(tag => 
+      !task?.tags?.includes(tag.id) && 
+      tag.name.toLowerCase().includes(search)
+    );
+  }, [allTags, task?.tags, tagSearchValue]);
+
+  const showCreateOption = useMemo(() => {
+    const search = tagSearchValue.trim();
+    if (!search) return false;
+    return !allTags?.some(tag => tag.name.toLowerCase() === search.toLowerCase());
+  }, [allTags, tagSearchValue]);
+
+  const handleCreateAndAddTag = async () => {
+    const name = tagSearchValue.trim();
+    if (!name || !task) return;
+
+    try {
+      // 随机生成一个颜色，或者默认一个颜色
+      const colors = ['#FF4D4F', '#FF7A45', '#FFA940', '#FFC53D', '#FFEC3D', '#BAE637', '#73D13D', '#5CDBD3', '#40A9FF', '#597EF7', '#9254DE', '#F759AB'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      
+      const newTag = await createTag.mutateAsync({ name, color: randomColor });
+      if (newTag) {
+        handleToggleTag(newTag.id);
+        setTagSearchValue('');
+      }
+    } catch (error) {
+      console.error('Failed to create tag:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isTagPopoverOpen) {
+      setTagSearchValue('');
+      // 延迟聚焦，确保 DOM 已渲染
+      setTimeout(() => tagSearchInputRef.current?.focus(), 50);
+    }
+  }, [isTagPopoverOpen]);
 
   const handleToggleTag = (tagId: string) => {
     if (!task) return;
@@ -816,17 +861,31 @@ const handleDescriptionBlur = () => {
                 {isTagPopoverOpen && (
                   <div
                     ref={tagPopoverRef}
-                    className="absolute bottom-full left-0 mb-2 w-48 bg-white border border-gray-100 shadow-xl rounded-lg p-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                    className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-100 shadow-xl rounded-lg p-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
                   >
-                    <div className="text-[11px] font-bold text-gray-400 px-2 py-1 uppercase tracking-tighter border-b border-gray-50 mb-1">选择标签</div>
-                    <div className="max-h-48 overflow-y-auto">
-                      {(allTags || [])
-                        .filter(tag => !task.tags?.includes(tag.id))
-                        .map(tag => (
+                    <div className="relative mb-2">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        ref={tagSearchInputRef}
+                        type="text"
+                        value={tagSearchValue}
+                        onChange={(e) => setTagSearchValue(e.target.value)}
+                        placeholder="快速搜索或创建标签"
+                        className="w-full pl-7 pr-2 py-1.5 bg-gray-50 border-none rounded-md text-[13px] outline-none placeholder:text-gray-300 focus:bg-gray-100 transition-colors"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && showCreateOption) {
+                            handleCreateAndAddTag();
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                      {filteredTags.map(tag => (
                         <div
                           key={tag.id}
                           onClick={() => handleToggleTag(tag.id)}
-                          className="flex items-center justify-between px-2 py-1.5 hover:bg-[#F0F7FF] rounded-md cursor-pointer transition-colors"
+                          className="flex items-center justify-between px-2 py-1.5 hover:bg-[#F0F7FF] rounded-md cursor-pointer transition-colors group"
                         >
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color || '#CBD5E0' }} />
@@ -834,9 +893,20 @@ const handleDescriptionBlur = () => {
                           </div>
                         </div>
                       ))}
-                      {(!allTags || allTags.filter(tag => !task.tags?.includes(tag.id)).length === 0) && (
+
+                      {showCreateOption && (
+                        <div
+                          onClick={handleCreateAndAddTag}
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-[#F0F7FF] rounded-md cursor-pointer transition-colors text-[#1890FF]"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span className="text-[13px]">创建标签 "{tagSearchValue}"</span>
+                        </div>
+                      )}
+
+                      {filteredTags.length === 0 && !showCreateOption && (
                         <div className="px-2 py-4 text-center text-xs text-gray-400 italic">
-                          {!allTags || allTags.length === 0 ? '暂无可用标签' : '所有标签已添加'}
+                          {tagSearchValue ? '未找到相关标签' : '暂无可用标签'}
                         </div>
                       )}
                     </div>
