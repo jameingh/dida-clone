@@ -326,7 +326,11 @@ impl TaskRepository {
     }
 
     fn get_task_tags(conn: &rusqlite::Connection, task_id: &str) -> Result<Vec<String>> {
-        let mut stmt = conn.prepare("SELECT tag_id FROM task_tags WHERE task_id = ?1")?;
+        let mut stmt = conn.prepare(
+            "SELECT tt.tag_id FROM task_tags tt
+             JOIN tags t ON tt.tag_id = t.id
+             WHERE tt.task_id = ?1"
+        )?;
         let tags = stmt.query_map(params![task_id], |row| row.get(0))?
             .collect::<rusqlite::Result<Vec<String>>>()?;
         Ok(tags)

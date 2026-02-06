@@ -9,6 +9,8 @@ pub struct Database {
 impl Database {
     pub fn new(db_path: PathBuf) -> Result<Self> {
         let conn = Connection::open(db_path)?;
+        // 启用外键约束
+        conn.execute("PRAGMA foreign_keys = ON", [])?;
         let db = Database {
             conn: Arc::new(Mutex::new(conn)),
         };

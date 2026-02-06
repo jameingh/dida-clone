@@ -78,6 +78,9 @@ impl TagRepository {
     pub fn delete(db: &Database, tag_id: &str) -> Result<()> {
         let conn = db.conn.lock().unwrap();
         
+        // 先手动删除关联，以防外键约束未生效或未配置
+        conn.execute("DELETE FROM task_tags WHERE tag_id = ?1", params![tag_id])?;
+        
         let rows_affected = conn.execute("DELETE FROM tags WHERE id = ?1", params![tag_id])?;
         
         if rows_affected == 0 {

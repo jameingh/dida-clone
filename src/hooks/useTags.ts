@@ -39,6 +39,8 @@ export function useDeleteTag() {
         mutationFn: (tagId: string) => tagService.deleteTag(tagId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tags'] });
+            // 删除标签后，任务中的标签关联也会被删除，所以需要刷新任务列表
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
         },
     });
 }
