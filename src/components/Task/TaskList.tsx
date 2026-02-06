@@ -384,40 +384,35 @@ export default function TaskList() {
       {!hideInput && (
         <div className="px-4 py-3 shrink-0">
           <form onSubmit={handleAddTask} className="relative">
-            <div className={`flex flex-col bg-[#F5F5F5] focus-within:bg-white border border-transparent focus-within:border-gray-200 rounded transition-all group ${hasAttributes ? 'pb-2' : ''}`}>
+            <div className={`flex flex-col bg-[#F1F1F1] focus-within:bg-white border-2 border-transparent focus-within:border-[#1890FF]/30 rounded-xl transition-all group ${hasAttributes ? 'pb-2' : ''}`}>
               {/* 输入区域 */}
-              <div className="flex items-center gap-2 px-3 py-2.5">
+              <div className="flex items-center gap-2 px-3 py-2">
                 <Plus className={`w-5 h-5 transition-colors shrink-0 ${newTaskPriority ? getPriorityColor(newTaskPriority) : 'text-gray-400 group-focus-within:text-[#1890FF]'}`} />
                 <input
                   ref={inputRef}
                   type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  onBlur={(e) => {
-                    // 如果点击的是日期选择器或更多菜单，不应该导致标题消失
-                    // 实际上这里并没有代码导致消失，但我们可以增加防御性日志
-                    console.log('Task input blurred, current title:', newTaskTitle);
-                  }}
                   placeholder="添加任务"
-                  className="flex-1 bg-transparent text-[14px] text-gray-700 outline-none placeholder:text-gray-400"
+                  className="flex-1 bg-transparent h-9 text-[14px] text-gray-700 outline-none placeholder:text-gray-400"
                 />
 
-                {/* 右侧按钮组 */}
-                <div className="flex items-center gap-1">
+                {/* 右侧按钮组 - 只有在聚焦或有内容时才显示 */}
+                <div className={`flex items-center gap-1 transition-all duration-200 ${newTaskTitle || showDatePicker || showMoreMenu ? 'opacity-100' : 'opacity-0 group-focus-within:opacity-100'}`}>
                   {/* 日期按钮 */}
                   <div className="relative">
                     <button
                       type="button"
                       onClick={() => setShowDatePicker(!showDatePicker)}
-                      className="flex items-center gap-1 px-2 py-1 text-[13px] text-gray-500 hover:text-[#1890FF] hover:bg-blue-50 rounded transition-colors shrink-0"
+                      className="flex items-center gap-1 px-1.5 py-1 text-[13px] text-gray-400 hover:text-[#1890FF] hover:bg-blue-50 rounded-lg transition-colors shrink-0"
                     >
                       {newTaskDueDate ? (
                         <>
-                          <span className="text-[#1890FF]">{formatDate(newTaskDueDate)}</span>
-                          <ChevronDown className="w-3 h-3 text-[#1890FF]" />
+                          <span className="text-[#1890FF] font-medium">{formatDate(newTaskDueDate)}</span>
+                          <ChevronDown className="w-3.5 h-3.5 text-[#1890FF]" />
                         </>
                       ) : (
-                        <Calendar className="w-4 h-4" />
+                        <Calendar className="w-4.5 h-4.5" />
                       )}
                     </button>
 
@@ -441,9 +436,9 @@ export default function TaskList() {
                     <button
                       type="button"
                       onClick={() => setShowMoreMenu(!showMoreMenu)}
-                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                      <ChevronDown className="w-4 h-4" />
+                      <ChevronDown className="w-4.5 h-4.5" />
                     </button>
 
                     {/* 更多菜单浮层 */}
