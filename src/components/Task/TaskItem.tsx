@@ -225,7 +225,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
                 </span>
                 
                 {/* 悬浮显示的隐藏标签列表 */}
-                <div className="absolute bottom-full right-0 mb-2 hidden group-hover/tag:block z-[100] animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute top-full right-0 mt-2 hidden group-hover/tag:block z-[100] animate-in fade-in zoom-in-95 duration-150">
                   <div className="bg-white border border-gray-100 shadow-xl rounded-lg p-2 w-max max-w-[300px]">
                     <div className="flex flex-row flex-wrap gap-1.5">
                       {task.tags
@@ -242,7 +242,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
                         ))}
                     </div>
                     {/* 小三角箭头 */}
-                    <div className="absolute top-full right-4 w-2 h-2 bg-white border-r border-b border-gray-100 rotate-45 -translate-y-1" />
+                    <div className="absolute bottom-full right-4 w-2 h-2 bg-white border-l border-t border-gray-100 rotate-45 translate-y-1" />
                   </div>
                 </div>
               </div>

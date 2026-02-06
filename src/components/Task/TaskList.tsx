@@ -659,7 +659,7 @@ export default function TaskList() {
       )}
 
       {/* 任务列表 */}
-      <div className="flex-1 overflow-y-auto w-full">
+      <div className="flex-1 overflow-y-auto w-full relative z-10">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
