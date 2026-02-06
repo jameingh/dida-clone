@@ -53,6 +53,7 @@ export function useCreateTaskExtended() {
       title,
       listId,
       dueDate,
+      reminder,
       priority,
       tags,
       description
@@ -60,11 +61,12 @@ export function useCreateTaskExtended() {
       title: string;
       listId: string;
       dueDate?: number;
+      reminder?: string;
       priority?: number;
       tags?: string[];
       description?: string;
     }) =>
-      taskService.createTaskExtended(title, listId, dueDate, priority, tags, description),
+      taskService.createTaskExtended(title, listId, dueDate, reminder, priority, tags, description),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },

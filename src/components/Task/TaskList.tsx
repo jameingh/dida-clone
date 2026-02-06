@@ -62,6 +62,7 @@ export default function TaskList() {
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState<number | undefined>();
+  const [newTaskReminder, setNewTaskReminder] = useState<string | undefined>();
   const [newTaskPriority, setNewTaskPriority] = useState<number | undefined>();
   const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
 
@@ -217,12 +218,14 @@ export default function TaskList() {
         title: title,
         listId: listId,
         dueDate: newTaskDueDate,
+        reminder: newTaskReminder,
         priority: newTaskPriority,
         tags: Array.from(tagsToAssign),
         description: undefined,
       });
       setNewTaskTitle('');
       setNewTaskDueDate(undefined);
+      setNewTaskReminder(undefined);
       setNewTaskPriority(undefined);
       setNewTaskTags([]);
       setShowDatePicker(false);
@@ -421,8 +424,10 @@ export default function TaskList() {
                       <div ref={datePickerRef} className="absolute top-full right-0 mt-2 z-50">
                         <DatePicker
                           selectedDate={newTaskDueDate}
-                          onSelect={(timestamp) => {
+                          reminder={newTaskReminder}
+                          onSelect={(timestamp, reminder) => {
                             setNewTaskDueDate(timestamp);
+                            setNewTaskReminder(reminder);
                             setShowDatePicker(false);
                             setTimeout(() => inputRef.current?.focus(), 0);
                           }}

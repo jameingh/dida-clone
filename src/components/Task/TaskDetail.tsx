@@ -429,14 +429,15 @@ const handleDescriptionBlur = () => {
     setIsPriorityPopoverOpen(false);
   };
 
-  const handleDateChange = (timestamp: number | undefined) => {
-    if (!task) return;
-    updateTask.mutate({
-      ...task,
-      due_date: timestamp || null
-    });
-    setIsDatePickerOpen(false);
-  };
+  const handleDateChange = (timestamp: number | undefined, reminder?: string) => {
+        if (!task) return;
+        updateTask.mutate({
+            ...task,
+            due_date: timestamp || null,
+            reminder: reminder || null
+        });
+        setIsDatePickerOpen(false);
+    };
 
   const handleDelete = () => {
     if (task) {

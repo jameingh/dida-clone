@@ -13,7 +13,7 @@ export interface Task {
   completed: boolean;
   priority: Priority;
   due_date: number | null;
-  reminder: number | null;
+  reminder: string | null;
   tags: string[];
   parent_id: string | null;
   order: number;
@@ -29,7 +29,7 @@ export interface CreateTaskInput {
   description?: string;
   priority?: Priority;
   due_date?: number;
-  reminder?: number;
+  reminder?: string;
   tags?: string[];
   parent_id?: string;
 }

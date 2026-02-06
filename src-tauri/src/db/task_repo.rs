@@ -347,7 +347,7 @@ impl TaskRepository {
             description: row.get(2)?,
             list_id: row.get(3)?,
             completed: row.get::<_, i32>(4)? != 0,
-            priority: Priority::from_i32(row.get(5)?),
+            priority: Priority::from_i32(row.get::<_, i32>(5)?),
             due_date: row.get(6)?,
             reminder: row.get(7)?,
             parent_id: row.get(8)?,

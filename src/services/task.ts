@@ -152,6 +152,7 @@ const browserTaskStore = {
     title: string,
     listId: string,
     dueDate?: number,
+    reminder?: string,
     priority?: number,
     tags?: string[],
     description?: string
@@ -161,6 +162,7 @@ const browserTaskStore = {
       title,
       list_id: listId,
       due_date: dueDate ?? null,
+      reminder: reminder ?? null,
       priority: (priority ?? 0) as Priority,
       tags: tags ?? [],
       description: description ?? '',
@@ -297,18 +299,20 @@ export const taskService = {
     title: string,
     listId: string,
     dueDate?: number,
+    reminder?: string,
     priority?: number,
     tags?: string[],
     description?: string
   ): Promise<Task> {
     if (!isTauriEnv()) {
-      return browserTaskStore.createTaskExtended(title, listId, dueDate, priority, tags, description);
+      return browserTaskStore.createTaskExtended(title, listId, dueDate, reminder, priority, tags, description);
     }
 
     const params = {
       title,
       listId,  // 使用 camelCase，Tauri 2.0 会自动映射到 Rust 的 snake_case
       dueDate,
+      reminder,
       priority,
       tags: tags || [],
       description

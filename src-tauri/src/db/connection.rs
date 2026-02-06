@@ -31,7 +31,7 @@ impl Database {
                 completed INTEGER NOT NULL DEFAULT 0,
                 priority INTEGER NOT NULL DEFAULT 0,
                 due_date INTEGER,
-                reminder INTEGER,
+                reminder TEXT,
                 parent_id TEXT,
                 order_num INTEGER NOT NULL DEFAULT 0,
                 is_deleted INTEGER NOT NULL DEFAULT 0,

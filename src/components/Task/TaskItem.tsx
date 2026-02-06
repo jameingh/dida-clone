@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Task, Priority } from '../../types';
 import { useToggleTask, useUpdateTask, useDeleteTask, useUndoDeleteTask, useDeleteTaskPermanently, useCreateSubtaskSimple } from '../../hooks/useTasks';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { GripVertical, MoreHorizontal, RotateCcw, XCircle } from 'lucide-react';
+import { GripVertical, MoreHorizontal, RotateCcw, XCircle, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import TaskContextMenu from './TaskContextMenu';
+import DatePicker from '../Common/DatePicker';
 
 interface TaskItemProps {
   task: Task;
@@ -29,6 +30,31 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const isTrashView = selectedListId === 'smart_trash';
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerPos, setDatePickerPos] = useState<{ top: number; left?: number; right?: number; bottom?: number } | null>(null);
+  const dateTriggerRef = useRef<HTMLDivElement>(null);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // 处理点击外部关闭日期选择器
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node) &&
+          dateTriggerRef.current && !dateTriggerRef.current.contains(event.target as Node)) {
+        setShowDatePicker(false);
+      }
+    };
+    if (showDatePicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDatePicker]);
+
+  // 当窗口大小改变时，如果日期选择器开启，则关闭它或重新计算位置
+  useEffect(() => {
+    const handleResize = () => setShowDatePicker(false);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // dnd-kit sortable hook
   const {
@@ -133,6 +159,51 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
 
   const handleUpdateTags = (tagIds: string[]) => {
     updateTask.mutate({ ...task, tags: tagIds });
+  };
+
+  const handleDateClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (dateTriggerRef.current) {
+      const rect = dateTriggerRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      
+      // DatePicker 大约高度为 500px (根据内容估算)
+      const pickerHeight = 500;
+      const pickerWidth = 280;
+      
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      let finalPos: { top?: number; bottom?: number; left?: number; right?: number } = {};
+      
+      // 垂直定位：优先向下弹出，如果下方空间不足且上方空间更大，则向上弹出
+      if (spaceBelow < pickerHeight && spaceAbove > spaceBelow) {
+        finalPos.bottom = viewportHeight - rect.top + 8;
+      } else {
+        finalPos.top = rect.bottom + 8;
+      }
+      
+      // 水平定位：优先右对齐，如果左侧空间不足，则左对齐
+      const spaceLeft = rect.right;
+      if (spaceLeft < pickerWidth) {
+        finalPos.left = rect.left;
+      } else {
+        finalPos.right = viewportWidth - rect.right;
+      }
+      
+      setDatePickerPos(finalPos as any);
+      setShowDatePicker(!showDatePicker);
+    }
+  };
+
+  const handleDatePickerSelect = (timestamp: number | undefined, reminder?: string) => {
+    updateTask.mutate({
+      ...task,
+      due_date: timestamp || null,
+      reminder: reminder || 'none',
+    });
+    setShowDatePicker(false);
   };
 
   const getPriorityClass = (priority: Priority) => {
@@ -250,10 +321,57 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
           </div>
         )}
 
-        {/* 任务日期 - 已经在右侧 */}
-        {task.due_date && (
-          <div className="flex-shrink-0 flex items-center text-[11px] text-gray-400 font-medium px-2">
-            <span>{format(new Date(task.due_date * 1000), 'M月d日')}</span>
+        {/* 任务日期和提醒 */}
+        {(task.due_date || (task.reminder && task.reminder !== 'none')) && (
+          <div 
+            ref={dateTriggerRef}
+            onClick={handleDateClick}
+            title={(() => {
+              if (!task.due_date) return '';
+              const date = new Date(task.due_date * 1000);
+              const dateStr = format(date, 'yyyy年M月d日');
+              const timeStr = (date.getHours() !== 0 || date.getMinutes() !== 0) ? `, ${format(date, 'HH:mm')}` : '';
+              const now = new Date();
+              let dayPrefix = '';
+              if (date.toDateString() === now.toDateString()) dayPrefix = '今天, ';
+              else if (date.toDateString() === new Date(now.getTime() + 86400000).toDateString()) dayPrefix = '明天, ';
+              return `${dayPrefix}${dateStr}${timeStr}`;
+            })()}
+            className="flex-shrink-0 flex items-center gap-1 text-[11px] text-gray-400 font-medium px-2 hover:bg-gray-100 rounded py-0.5 transition-colors cursor-pointer"
+          >
+            {task.reminder && task.reminder !== 'none' && (
+              <Bell className="w-3 h-3 text-gray-400" />
+            )}
+            {task.due_date && (
+              <span>
+                {(() => {
+                  const date = new Date(task.due_date * 1000);
+                  const now = new Date();
+                  const isToday = date.toDateString() === now.toDateString();
+                  
+                  // 检查是否有具体时间（不只是零点）
+                  const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
+                  
+                  if (isToday) {
+                    return hasTime ? format(date, 'HH:mm') : '今天';
+                  }
+                  
+                  // 检查是否是明天
+                  const tomorrow = new Date();
+                  tomorrow.setDate(now.getDate() + 1);
+                  if (date.toDateString() === tomorrow.toDateString()) {
+                    return '明天';
+                  }
+
+                  // 检查是否是今年
+                  if (date.getFullYear() === now.getFullYear()) {
+                    return format(date, 'M月d日');
+                  }
+                  
+                  return format(date, 'yyyy年M月d日');
+                })()}
+              </span>
+            )}
           </div>
         )}
 
@@ -305,6 +423,26 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
           onAddSubtask={handleAddSubtask}
           onUpdateTags={handleUpdateTags}
         />
+      )}
+
+      {showDatePicker && datePickerPos && (
+        <div 
+          ref={datePickerRef}
+          className="fixed z-[1000] shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+          style={{ 
+            top: datePickerPos.top !== undefined ? `${datePickerPos.top}px` : 'auto',
+            bottom: datePickerPos.bottom !== undefined ? `${datePickerPos.bottom}px` : 'auto',
+            left: datePickerPos.left !== undefined ? `${datePickerPos.left}px` : 'auto',
+            right: datePickerPos.right !== undefined ? `${datePickerPos.right}px` : 'auto'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DatePicker 
+            selectedDate={task.due_date || undefined}
+            reminder={task.reminder || 'none'}
+            onSelect={handleDatePickerSelect}
+          />
+        </div>
       )}
     </>
   );

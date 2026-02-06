@@ -29,10 +29,11 @@ import {
 
 interface DatePickerProps {
     selectedDate?: number; // Unix timestamp
-    onSelect: (timestamp: number | undefined) => void;
+    reminder?: string; // 提醒设置，如 "none", "on_time", "5m_before", etc.
+    onSelect: (timestamp: number | undefined, reminder?: string) => void;
 }
 
-export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) {
+export default function DatePicker({ selectedDate, reminder: initialReminder, onSelect }: DatePickerProps) {
     const [viewDate, setViewDate] = useState(
         selectedDate ? new Date(selectedDate * 1000) : new Date()
     );
@@ -50,30 +51,38 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
     const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
     const [isTimeSet, setIsTimeSet] = useState(!!selectedDate);
     const [showTimeList, setShowTimeList] = useState(false);
+    const [showReminderList, setShowReminderList] = useState(false);
+    const [selectedReminder, setSelectedReminder] = useState(initialReminder || 'none');
     
     const hourInputRef = useRef<HTMLInputElement>(null);
     const minuteInputRef = useRef<HTMLInputElement>(null);
     const timeListRef = useRef<HTMLDivElement>(null);
+    const reminderListRef = useRef<HTMLDivElement>(null);
 
-    // 点击外部隐藏时间列表
+    // 点击外部隐藏列表
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Node;
-            // 检查点击是否在时间列表之外，且不在小时/分钟输入框之内
-            const isInsideInput = hourInputRef.current?.contains(target) || minuteInputRef.current?.contains(target);
             
-            if (timeListRef.current && !timeListRef.current.contains(target) && !isInsideInput) {
+            // 检查时间列表
+            const isInsideTimeInput = hourInputRef.current?.contains(target) || minuteInputRef.current?.contains(target);
+            if (timeListRef.current && !timeListRef.current.contains(target) && !isInsideTimeInput) {
                 setShowTimeList(false);
+            }
+
+            // 检查提醒列表
+            if (reminderListRef.current && !reminderListRef.current.contains(target)) {
+                setShowReminderList(false);
             }
         };
 
-        if (showTimeList) {
+        if (showTimeList || showReminderList) {
             document.addEventListener('mousedown', handleClickOutside);
         }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [showTimeList]);
+    }, [showTimeList, showReminderList]);
 
     // 弹窗打开时，自动滚动到选中项
     useEffect(() => {
@@ -202,12 +211,22 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
             // 如果没设置时间，默认 00:00:00，后端或前端列表展示会根据是否有时间位来判断
             finalDate.setHours(0, 0, 0, 0);
         }
-        onSelect(Math.floor(finalDate.getTime() / 1000));
+        onSelect(Math.floor(finalDate.getTime() / 1000), selectedReminder);
     };
 
     const handleClear = () => {
-        onSelect(undefined);
+        onSelect(undefined, 'none');
     };
+
+    const reminderOptions = [
+        { value: 'none', label: '无' },
+        { value: 'on_time', label: '准时' },
+        { value: '5m_before', label: '提前5分钟' },
+        { value: '30m_before', label: '提前30分钟' },
+        { value: '1h_before', label: '提前1小时' },
+        { value: '1d_before', label: '提前1天' },
+        { value: 'custom', label: '自定义' },
+    ];
 
     const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -424,22 +443,57 @@ export default function DatePicker({ selectedDate, onSelect }: DatePickerProps) 
                 </div>
 
                 {/* 提醒行 */}
-                <button 
-                    type="button"
-                    onClick={(e) => e.preventDefault()}
-                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors"
-                >
-                    <div className="flex items-center gap-3 text-gray-600 group-hover:text-gray-900">
-                        <Bell className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-                        <span className="text-[13px]">提醒</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <span className="text-[13px] text-[#1890FF]">
-                            {isTimeSet ? '准时' : '无'}
-                        </span>
-                        <ChevronRight className="w-4 h-4 text-gray-300" />
-                    </div>
-                </button>
+                <div className="relative">
+                    <button 
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setShowReminderList(!showReminderList);
+                            setShowTimeList(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors ${selectedReminder !== 'none' ? 'text-[#1890FF]' : 'text-gray-600'}`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Bell className={`w-4 h-4 ${selectedReminder !== 'none' ? 'text-[#1890FF]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                            <span className="text-[13px]">提醒</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className={`text-[13px] ${selectedReminder !== 'none' ? 'text-[#1890FF]' : 'text-gray-400'}`}>
+                                {reminderOptions.find(o => o.value === selectedReminder)?.label || '无'}
+                            </span>
+                            <ChevronRight className="w-4 h-4 text-gray-300" />
+                        </div>
+                    </button>
+
+                    {/* 提醒列表弹窗 */}
+                    {showReminderList && (
+                        <div 
+                            ref={reminderListRef}
+                            className="absolute bottom-full left-0 w-full mb-1 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.15)] rounded-xl border border-gray-100 py-1 z-[60] animate-in slide-in-from-bottom-2 duration-200"
+                        >
+                            <div className="max-h-[240px] overflow-y-auto">
+                                {reminderOptions.map((option) => {
+                                    const isSelected = selectedReminder === option.value;
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setSelectedReminder(option.value);
+                                                setShowReminderList(false);
+                                            }}
+                                            className={`w-full px-4 py-2 text-left text-[13px] hover:bg-gray-50 transition-colors flex items-center justify-between ${isSelected ? 'text-[#1890FF] bg-blue-50/50' : 'text-gray-600'}`}
+                                        >
+                                            <span>{option.label}</span>
+                                            {isSelected && <Check className="w-4 h-4" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* 重复行 */}
                 <button 

@@ -9,7 +9,7 @@ pub struct Task {
     pub completed: bool,
     pub priority: Priority,
     pub due_date: Option<i64>,
-    pub reminder: Option<i64>,
+    pub reminder: Option<String>,
     pub tags: Vec<String>,
     pub parent_id: Option<String>,
     pub order: i32,
