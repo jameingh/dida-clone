@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { useAppStore } from '../../store/useAppStore';
-import { Task } from '../../types';
 import ReminderModal from './ReminderModal';
 
 const REMINDER_OFFSETS: Record<string, number> = {

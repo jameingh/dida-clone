@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Target } from 'lucide-react';
 import { Task } from '../../types';
-import { format, isToday, isTomorrow, addMinutes, addHours, addDays, startOfTomorrow, setHours, setMinutes } from 'date-fns';
+import { format, isToday, isTomorrow, startOfTomorrow, setHours, setMinutes } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
 interface ReminderModalProps {
