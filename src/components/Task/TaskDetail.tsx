@@ -774,9 +774,17 @@ const handleDescriptionBlur = () => {
               return (
                 <span
                   key={tagId}
-                  className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px] group cursor-default"
+                  className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium group cursor-default transition-colors"
+                  style={tagInfo ? { 
+                    color: tagInfo.color, 
+                    backgroundColor: `${tagInfo.color}15`,
+                    border: `1px solid ${tagInfo.color}20`
+                  } : {
+                    backgroundColor: '#F3F4F6',
+                    color: '#6B7280'
+                  }}
                 >
-                  <Hash className="w-3 h-3 mr-0.5 opacity-60" />
+                  <Hash className="w-3 h-3 mr-0.5 opacity-70" style={tagInfo ? { color: tagInfo.color } : undefined} />
                   {tagInfo?.name || tagId}
                   {!isTrashView && (
                     <button
@@ -784,7 +792,8 @@ const handleDescriptionBlur = () => {
                         e.stopPropagation();
                         handleToggleTag(tagId);
                       }}
-                      className="ml-1 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="ml-1 hover:opacity-100 opacity-40 transition-opacity"
+                      style={tagInfo ? { color: tagInfo.color } : undefined}
                     >
                       <X className="w-2.5 h-2.5" />
                     </button>
