@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useLists, useCreateList } from '../../hooks/useLists';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
-import { Plus, Hash, ChevronDown, ChevronRight, MoreHorizontal, Check, X } from 'lucide-react';
+import { Plus, Hash, ChevronDown, ChevronRight, MoreHorizontal, Check, X, Inbox, Calendar, CalendarDays, ClipboardList, CheckCircle2, Trash2 } from 'lucide-react';
 import AddTagModal from '../Tag/AddTagModal';
 import TagContextMenu from '../Tag/TagContextMenu';
 import { Tag } from '../../types';
@@ -105,6 +105,30 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
       }
       return next;
     });
+  };
+
+  const getSmartListIcon = (id: string, isSelected: boolean) => {
+    const iconProps = {
+      className: `w-4.5 h-4.5 shrink-0 ${isSelected ? 'text-[#1890FF]' : 'text-gray-500'}`,
+      strokeWidth: isSelected ? 2.5 : 2
+    };
+
+    switch (id) {
+      case 'smart_inbox':
+        return <Inbox {...iconProps} className={`${iconProps.className} text-blue-500`} />;
+      case 'smart_today':
+        return <Calendar {...iconProps} className={`${iconProps.className} text-orange-500`} />;
+      case 'smart_week':
+        return <CalendarDays {...iconProps} className={`${iconProps.className} text-purple-500`} />;
+      case 'smart_all':
+        return <ClipboardList {...iconProps} className={`${iconProps.className} text-emerald-500`} />;
+      case 'smart_completed':
+        return <CheckCircle2 {...iconProps} className={`${iconProps.className} text-green-500`} />;
+      case 'smart_trash':
+        return <Trash2 {...iconProps} className={`${iconProps.className} text-gray-400`} />;
+      default:
+        return null;
+    }
   };
 
   const tagTree = useMemo(() => {
@@ -238,19 +262,21 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
             <div className="px-3 py-2 text-xs text-gray-400 italic">初始化清单中...</div>
           )}
           {smartLists.map((list) => {
-            console.log('Sidebar - Rendering smart list item:', JSON.stringify(list));
+            const isSelected = selectedListId === list.id;
             return (
               <button
                 key={list.id}
                 onClick={() => setSelectedListId(list.id)}
-                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md transition-colors group ${selectedListId === list.id
+                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md transition-colors group ${isSelected
                   ? 'bg-[#E6F7FF] text-[#1890FF]'
                   : 'text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-lg w-5 h-5 flex items-center justify-center">{list.icon}</span>
-                  <span className={`text-sm ${selectedListId === list.id ? 'font-semibold' : 'font-medium'}`}>
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    {getSmartListIcon(list.id, isSelected)}
+                  </div>
+                  <span className={`text-sm ${isSelected ? 'font-semibold' : 'font-medium'}`}>
                     {list.name}
                   </span>
                 </div>
