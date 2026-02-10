@@ -266,7 +266,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
         {/* 任务内容 */}
         <div className="flex-1 min-w-0 px-1">
           <div
-            className={`text-[14px] leading-tight truncate ${task.completed ? 'line-through text-gray-400' : 'text-gray-800'
+            className={`text-[14px] leading-tight truncate ${task.completed ? 'text-gray-400' : 'text-gray-800'
               }`}
           >
             {task.title || '无标题任务'}
@@ -337,10 +337,28 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
               else if (date.toDateString() === new Date(now.getTime() + 86400000).toDateString()) dayPrefix = '明天, ';
               return `${dayPrefix}${dateStr}${timeStr}`;
             })()}
-            className="flex-shrink-0 flex items-center gap-1 text-[11px] text-gray-400 font-medium px-2 hover:bg-gray-100 rounded py-0.5 transition-colors cursor-pointer"
+            className={`flex-shrink-0 flex items-center gap-1 text-[11px] font-medium px-2 hover:bg-gray-100 rounded py-0.5 transition-colors cursor-pointer ${
+              (() => {
+                if (!task.due_date || task.completed) return 'text-gray-400';
+                const now = new Date();
+                now.setHours(0, 0, 0, 0);
+                const taskDate = new Date(task.due_date * 1000);
+                taskDate.setHours(0, 0, 0, 0);
+                return taskDate.getTime() < now.getTime() ? 'text-[#FF4D4F]' : 'text-gray-400';
+              })()
+            }`}
           >
             {task.reminder && task.reminder !== 'none' && (
-              <Bell className="w-3 h-3 text-gray-400" />
+              <Bell className={`w-3 h-3 ${
+                (() => {
+                  if (!task.due_date || task.completed) return 'text-gray-400';
+                  const now = new Date();
+                  now.setHours(0, 0, 0, 0);
+                  const taskDate = new Date(task.due_date * 1000);
+                  taskDate.setHours(0, 0, 0, 0);
+                  return taskDate.getTime() < now.getTime() ? 'text-[#FF4D4F]' : 'text-gray-400';
+                })()
+              }`} />
             )}
             {task.due_date && (
               <span>

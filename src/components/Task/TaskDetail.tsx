@@ -603,10 +603,20 @@ const handleDescriptionBlur = () => {
               onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
               className="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
             >
-              <Calendar className={`w-4 h-4 ${task.due_date ? 'text-[#1890FF]' : 'text-gray-400'}`} />
-              <span className={`text-[13px] font-medium ${task.due_date ? 'text-gray-700' : 'text-gray-400'}`}>
-                {formatDate(task.due_date)}
-              </span>
+              {(() => {
+                const isOverdue = task.due_date && (new Date(task.due_date * 1000).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0));
+                const iconColor = isOverdue ? 'text-[#FF4D4F]' : (task.due_date ? 'text-[#1890FF]' : 'text-gray-400');
+                const textColor = isOverdue ? 'text-[#FF4D4F]' : (task.due_date ? 'text-gray-700' : 'text-gray-400');
+                
+                return (
+                  <>
+                    <Calendar className={`w-4 h-4 ${iconColor}`} />
+                    <span className={`text-[13px] font-medium ${textColor}`}>
+                      {formatDate(task.due_date)}
+                    </span>
+                  </>
+                );
+              })()}
             </button>
             {isDatePickerOpen && (
               <div ref={datePickerRef} className="absolute top-full left-0 mt-1 z-50">
@@ -784,7 +794,7 @@ const handleDescriptionBlur = () => {
               <h3
                 onClick={handleTitleStartEdit}
                 className={`text-[18px] font-bold text-gray-800 leading-snug break-words ${isTrashView ? 'text-gray-400 cursor-default' : 'cursor-text hover:bg-gray-50 -mx-1 px-1 rounded transition-colors'
-                  } ${task.completed ? 'line-through text-gray-400' : ''}`}
+                  } ${task.completed ? 'text-gray-400' : ''}`}
                 title={isTrashView ? '' : "点击修改标题"}
               >
                 {task.title || (isEditingTitle ? '' : '无标题任务')}
