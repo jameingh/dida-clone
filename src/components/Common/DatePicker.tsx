@@ -105,6 +105,10 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
         if (time) {
             setSelectedTime(time);
             setIsTimeSet(true);
+            // 点击设置时间时，如果当前没有提醒，默认设为“准时”
+            if (selectedReminder === 'none') {
+                setSelectedReminder('on_time');
+            }
         }
         onSelect(Math.floor(date.getTime() / 1000));
     };
@@ -119,6 +123,10 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
     const handleTimeSelect = (hour: number, minute: number) => {
         setSelectedTime({ hour, minute });
         setIsTimeSet(true);
+        // 点击选择时间时，如果当前没有提醒，默认设为“准时”
+        if (selectedReminder === 'none') {
+            setSelectedReminder('on_time');
+        }
         setShowTimeList(false);
     };
 
@@ -131,12 +139,19 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
             const hour = Math.min(Math.max(num, 0), 23);
             setSelectedTime(prev => ({ ...prev, hour }));
             setIsTimeSet(true);
+            // 设置时间时，如果当前没有提醒，默认设为“准时”
+            if (selectedReminder === 'none') {
+                setSelectedReminder('on_time');
+            }
             minuteInputRef.current?.focus();
             minuteInputRef.current?.select();
         } else {
             // 允许输入 1 位数
             setSelectedTime(prev => ({ ...prev, hour: num || 0 }));
             setIsTimeSet(true);
+            if (selectedReminder === 'none') {
+                setSelectedReminder('on_time');
+            }
         }
     };
 
@@ -149,12 +164,19 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
             const minute = Math.min(Math.max(num, 0), 59);
             setSelectedTime(prev => ({ ...prev, minute }));
             setIsTimeSet(true);
+            // 设置时间时，如果当前没有提醒，默认设为“准时”
+            if (selectedReminder === 'none') {
+                setSelectedReminder('on_time');
+            }
             hourInputRef.current?.focus();
             hourInputRef.current?.select();
         } else {
             // 允许输入 1 位数
             setSelectedTime(prev => ({ ...prev, minute: num || 0 }));
             setIsTimeSet(true);
+            if (selectedReminder === 'none') {
+                setSelectedReminder('on_time');
+            }
         }
     };
 
@@ -319,6 +341,10 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
                             if (!isTimeSet) {
                                 setIsTimeSet(true);
                                 setShowTimeList(true);
+                                // 点击开启时间时，如果当前没有提醒，默认设为“准时”
+                                if (selectedReminder === 'none') {
+                                    setSelectedReminder('on_time');
+                                }
                             } else {
                                 setShowTimeList(!showTimeList);
                             }
