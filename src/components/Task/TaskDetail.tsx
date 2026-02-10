@@ -468,7 +468,7 @@ const handleDescriptionBlur = () => {
   return (
     <div 
       style={{ width: `${width}px` }}
-      className="border-l border-gray-200 bg-white flex flex-col relative flex-shrink-0"
+      className="border-l border-gray-200 bg-white flex flex-col relative flex-shrink-0 select-none"
     >
       {/* 左侧拉伸条 */}
       <div

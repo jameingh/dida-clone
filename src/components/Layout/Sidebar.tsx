@@ -222,7 +222,7 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
 
   return (
     <aside 
-      className="bg-[var(--dida-sidebar)] border-r border-[var(--dida-border-light)] flex flex-col pt-4 overflow-y-auto shrink-0"
+      className="bg-[var(--dida-sidebar)] border-r border-[var(--dida-border-light)] flex flex-col pt-4 overflow-y-auto shrink-0 select-none"
       style={{ width: `${width}px` }}
     >
       <div className="flex-1 px-2">

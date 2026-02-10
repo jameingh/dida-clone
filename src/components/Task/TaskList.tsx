@@ -318,7 +318,7 @@ export default function TaskList() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white select-none">
       {/* 顶部标题栏 */}
       <div className="px-6 py-4 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">

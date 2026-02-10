@@ -234,7 +234,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
         </div>
 
         {/* 任务内容 */}
-        <div className="flex-1 min-w-0 px-1">
+        <div className="flex-1 min-w-0 px-1 select-none">
           <div
             className={`text-[14px] leading-tight truncate ${task.completed ? 'text-gray-400' : 'text-gray-800'
               }`}

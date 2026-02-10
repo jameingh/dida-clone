@@ -58,6 +58,13 @@
     user-select: none !important;
     -webkit-user-select: none !important;
   }
+
+  /* 禁止 UI 元素文字选中 */
+  .select-none {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    cursor: default;
+  }
 }
 
 @layer components {
