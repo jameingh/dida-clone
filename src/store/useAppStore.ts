@@ -23,7 +23,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  selectedListId: 'smart_inbox',
+  selectedListId: 'smart_all',
   selectedTagId: null,
   selectedTaskId: null,
   viewMode: 'tasks',

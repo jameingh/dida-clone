@@ -36,10 +36,10 @@ impl List {
 
     pub fn new_smart(list_type: SmartListType) -> Self {
         let (name, icon) = match list_type {
-            SmartListType::Inbox => ("收集箱".to_string(), "📥".to_string()),
+            SmartListType::All => ("所有任务".to_string(), "📋".to_string()),
             SmartListType::Today => ("今天".to_string(), "📅".to_string()),
             SmartListType::Week => ("最近7天".to_string(), "📆".to_string()),
-            SmartListType::All => ("所有任务".to_string(), "📋".to_string()),
+            SmartListType::Inbox => ("收集箱".to_string(), "📥".to_string()),
             SmartListType::Completed => ("已完成".to_string(), "✅".to_string()),
             SmartListType::Trash => ("垃圾桶".to_string(), "🗑️".to_string()),
         };

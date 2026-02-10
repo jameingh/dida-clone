@@ -13,9 +13,9 @@ function createSmartList(type: SmartListType, order: number): List {
   let icon = '';
 
   switch (type) {
-    case SmartListType.Inbox:
-      name = '收集箱';
-      icon = '📥';
+    case SmartListType.All:
+      name = '所有任务';
+      icon = '📋';
       break;
     case SmartListType.Today:
       name = '今天';
@@ -25,9 +25,9 @@ function createSmartList(type: SmartListType, order: number): List {
       name = '最近7天';
       icon = '📆';
       break;
-    case SmartListType.All:
-      name = '所有任务';
-      icon = '📋';
+    case SmartListType.Inbox:
+      name = '收集箱';
+      icon = '📥';
       break;
     case SmartListType.Completed:
       name = '已完成';
@@ -59,10 +59,10 @@ function loadBrowserLists(): List[] {
     if (!raw) {
       // 首次初始化：创建与后端一致的智能清单
       const initial: List[] = [
-        createSmartList(SmartListType.Inbox, 0),
+        createSmartList(SmartListType.All, 0),
         createSmartList(SmartListType.Today, 1),
         createSmartList(SmartListType.Week, 2),
-        createSmartList(SmartListType.All, 3),
+        createSmartList(SmartListType.Inbox, 3),
         createSmartList(SmartListType.Completed, 4),
         createSmartList(SmartListType.Trash, 5),
       ];
@@ -74,18 +74,23 @@ function loadBrowserLists(): List[] {
     
     // 确保智能清单完整（例如：升级后新增了垃圾桶）
     const smartTypes = [
-      SmartListType.Inbox,
+      SmartListType.All,
       SmartListType.Today,
       SmartListType.Week,
-      SmartListType.All,
+      SmartListType.Inbox,
       SmartListType.Completed,
       SmartListType.Trash,
     ];
     
+    // 确保顺序正确（根据 smartTypes 的顺序更新 order）
     let updated = false;
     smartTypes.forEach((type, index) => {
-      if (!parsed.find(l => l.id === type)) {
+      const existing = parsed.find(l => l.id === type);
+      if (!existing) {
         parsed.push(createSmartList(type, index));
+        updated = true;
+      } else if (existing.order !== index) {
+        existing.order = index;
         updated = true;
       }
     });

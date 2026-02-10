@@ -178,8 +178,8 @@ export default function TaskList() {
       }
     }
     if (newTaskTitle.trim()) {
-      // 如果没有 selectedListId，默认为收集箱 (inbox)
-      const listId = selectedListId || 'smart_inbox';
+      // 如果是“所有任务”视图或没有选择清单，默认为收集箱 (inbox)
+      const listId = (selectedListId === 'smart_all' || !selectedListId) ? 'smart_inbox' : selectedListId;
       let title = newTaskTitle.trim();
       const tagsToAssign = new Set(newTaskTags);
 

@@ -66,10 +66,10 @@ impl Database {
 
         // 强制修复：如果存在 order_num 为 0 的多个智能清单，可能导致排序混乱或丢失
         // 我们可以根据 id 重新设置 order_num
-        let _ = conn.execute("UPDATE lists SET order_num = 0 WHERE id = 'smart_inbox'", []);
+        let _ = conn.execute("UPDATE lists SET order_num = 0 WHERE id = 'smart_all'", []);
         let _ = conn.execute("UPDATE lists SET order_num = 1 WHERE id = 'smart_today'", []);
         let _ = conn.execute("UPDATE lists SET order_num = 2 WHERE id = 'smart_week'", []);
-        let _ = conn.execute("UPDATE lists SET order_num = 3 WHERE id = 'smart_all'", []);
+        let _ = conn.execute("UPDATE lists SET order_num = 3 WHERE id = 'smart_inbox'", []);
         let _ = conn.execute("UPDATE lists SET order_num = 4 WHERE id = 'smart_completed'", []);
         let _ = conn.execute("UPDATE lists SET order_num = 5 WHERE id = 'smart_trash'", []);
 
@@ -141,10 +141,10 @@ impl Database {
         use crate::models::{List, SmartListType};
         
         let smart_types = vec![
-            SmartListType::Inbox,
+            SmartListType::All,
             SmartListType::Today,
             SmartListType::Week,
-            SmartListType::All,
+            SmartListType::Inbox,
             SmartListType::Completed,
             SmartListType::Trash,
         ];
