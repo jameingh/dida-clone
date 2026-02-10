@@ -2,12 +2,14 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useLists, useCreateList } from '../../hooks/useLists';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
-import { Plus, Hash, ChevronDown, ChevronRight, MoreHorizontal, Check, X, Inbox, Calendar, CalendarDays, ClipboardList, CheckCircle2, Trash2 } from 'lucide-react';
+import { Plus, Hash, ChevronDown, ChevronRight, MoreHorizontal, Check } from 'lucide-react';
 import AddTagModal from '../Tag/AddTagModal';
 import TagContextMenu from '../Tag/TagContextMenu';
 import { Tag } from '../../types';
 import { useDeleteTag, useUpdateTag } from '../../hooks/useTags';
 import { useAlertStore } from '../../store/useAlertStore';
+import { SMART_LIST_CONFIG } from '../../constants/smartLists';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 interface TagNode extends Tag {
   children: TagNode[];
@@ -36,6 +38,11 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
   const [isAddingList, setIsAddingList] = useState(false);
   const [newListTitle, setNewListTitle] = useState('');
   const newListInputRef = useRef<HTMLInputElement>(null);
+  const newListContainerRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside([newListContainerRef], () => {
+    if (isAddingList) setIsAddingList(false);
+  }, isAddingList);
 
   useEffect(() => {
     if (isAddingList) {
@@ -53,7 +60,7 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
       id: crypto.randomUUID(),
       name: newListTitle.trim(),
       icon: '📋',
-      color: '#3B82F6',
+      color: 'var(--dida-primary)',
       is_smart: false,
       order: (lists?.length || 0),
       created_at: Math.floor(Date.now() / 1000),
@@ -108,27 +115,16 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
   };
 
   const getSmartListIcon = (id: string, isSelected: boolean) => {
-    const iconProps = {
-      className: `w-4.5 h-4.5 shrink-0 ${isSelected ? 'text-[#1890FF]' : 'text-gray-500'}`,
-      strokeWidth: isSelected ? 2.5 : 2
-    };
+    const config = SMART_LIST_CONFIG[id as keyof typeof SMART_LIST_CONFIG];
+    if (!config) return null;
 
-    switch (id) {
-      case 'smart_inbox':
-        return <Inbox {...iconProps} />;
-      case 'smart_today':
-        return <Calendar {...iconProps} />;
-      case 'smart_week':
-        return <CalendarDays {...iconProps} />;
-      case 'smart_all':
-        return <ClipboardList {...iconProps} />;
-      case 'smart_completed':
-        return <CheckCircle2 {...iconProps} />;
-      case 'smart_trash':
-        return <Trash2 {...iconProps} />;
-      default:
-        return null;
-    }
+    const Icon = config.icon;
+    return (
+      <Icon 
+        className={`w-4.5 h-4.5 shrink-0 ${isSelected ? 'text-[var(--dida-primary)]' : 'text-gray-500'}`}
+        strokeWidth={isSelected ? 2.5 : 2}
+      />
+    );
   };
 
   const tagTree = useMemo(() => {
@@ -163,8 +159,8 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
           onClick={() => setSelectedTagId(node.id)}
           onContextMenu={(e) => handleContextMenu(e, node)}
           className={`w-full flex items-center justify-between py-1.5 rounded-md transition-colors group ${isSelected
-            ? 'bg-[#E6F7FF] text-[#1890FF]'
-            : 'text-gray-700 hover:bg-gray-200'
+            ? 'bg-[var(--dida-primary-light)] text-[var(--dida-primary)]'
+            : 'text-[var(--dida-text-main)] hover:bg-[var(--dida-bg-hover)]'
             }`}
           style={{ paddingLeft: `${level * 16 + 12}px`, paddingRight: '12px' }}
         >
@@ -173,18 +169,18 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
               {hasChildren ? (
                 <div 
                   onClick={(e) => toggleTagExpanded(node.id, e)}
-                  className="w-4 h-4 flex items-center justify-center hover:bg-gray-300 rounded transition-colors mr-1"
+                  className="w-4 h-4 flex items-center justify-center hover:bg-[var(--dida-border-light)] rounded transition-colors mr-1"
                 >
                   {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 </div>
               ) : (
                 <div className="w-5" /> 
               )}
-              <Hash className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[#1890FF]' : 'text-gray-400'}`} />
+              <Hash className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[var(--dida-primary)]' : 'text-[var(--dida-text-tertiary)]'}`} />
             </div>
             <span className={`text-sm truncate ${isSelected ? 'font-semibold' : 'font-medium'}`}>{node.name}</span>
           </div>
-          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: node.color || '#CBD5E0' }} />
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: node.color || 'var(--dida-tag-default)' }} />
         </button>
         {hasChildren && isExpanded && (
           <div className="flex flex-col">
@@ -216,17 +212,17 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
   if (isInitialLoading) {
     return (
       <aside 
-        className="bg-white border-r border-gray-200 p-4 shrink-0"
+        className="bg-white border-r border-[var(--dida-border-light)] p-4 shrink-0"
         style={{ width: `${width}px` }}
       >
-        <div className="text-sm text-gray-500">加载中...</div>
+        <div className="text-sm text-[var(--dida-text-secondary)]">加载中...</div>
       </aside>
     );
   }
 
   return (
     <aside 
-      className="bg-[#FAFAFA] border-r border-gray-200 flex flex-col pt-4 overflow-y-auto shrink-0"
+      className="bg-[var(--dida-sidebar)] border-r border-[var(--dida-border-light)] flex flex-col pt-4 overflow-y-auto shrink-0"
       style={{ width: `${width}px` }}
     >
       <div className="flex-1 px-2">
@@ -238,17 +234,17 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
                 key={tag.id}
                 onClick={() => setSelectedTagId(tag.id)}
                 onContextMenu={(e) => handleContextMenu(e, tag)}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all hover:bg-gray-100 border border-transparent group ${
-                  selectedTagId === tag.id ? 'bg-white shadow-sm border-gray-100' : ''
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all hover:bg-[var(--dida-bg-hover)] border border-transparent group ${
+                  selectedTagId === tag.id ? 'bg-white shadow-sm border-[var(--dida-border-light)]' : ''
                 }`}
                 title={tag.name}
               >
                 <div 
-                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1 transition-colors bg-white shadow-sm border border-gray-50 group-hover:border-gray-100"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1 transition-colors bg-white shadow-sm border border-[var(--dida-border-light)] group-hover:border-[var(--dida-border-light)]"
                 >
                   <Hash className="w-4 h-4" style={{ color: tag.color }} />
                 </div>
-                <span className="text-[10px] font-medium text-gray-500 truncate w-full text-center px-0.5">
+                <span className="text-[10px] font-medium text-[var(--dida-text-secondary)] truncate w-full text-center px-0.5">
                   {tag.name}
                 </span>
               </button>
@@ -259,7 +255,7 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
         {/* 智能清单 */}
         <div className="mb-2 space-y-0.5">
           {!hasSmartLists && !isListsLoading && (
-            <div className="px-3 py-2 text-xs text-gray-400 italic">初始化清单中...</div>
+            <div className="px-3 py-2 text-xs text-[var(--dida-text-tertiary)] italic">初始化清单中...</div>
           )}
           {smartLists.map((list) => {
             const isSelected = selectedListId === list.id;
@@ -268,8 +264,8 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
                 key={list.id}
                 onClick={() => setSelectedListId(list.id)}
                 className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md transition-colors group ${isSelected
-                  ? 'bg-[#E6F7FF] text-[#1890FF]'
-                  : 'text-gray-700 hover:bg-gray-200'
+                  ? 'bg-[var(--dida-primary-light)] text-[var(--dida-primary)]'
+                  : 'text-[var(--dida-text-main)] hover:bg-[var(--dida-bg-hover)]'
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -287,13 +283,13 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
 
         {/* 自定义清单 */}
         <div className="mt-6">
-          <div className="px-3 py-2 flex items-center justify-between group cursor-pointer hover:bg-gray-100/50 rounded-md">
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+          <div className="px-3 py-2 flex items-center justify-between group cursor-pointer hover:bg-[var(--dida-bg-hover)] rounded-md">
+            <div className="text-[11px] font-bold text-[var(--dida-text-tertiary)] uppercase tracking-wider">
               我的清单
             </div>
             <button
               onClick={() => setIsAddingList(true)}
-              className="text-gray-400 hover:text-[#1890FF] opacity-0 group-hover:opacity-100 transition-all p-0.5 rounded"
+              className="text-[var(--dida-text-tertiary)] hover:text-[var(--dida-primary)] opacity-0 group-hover:opacity-100 transition-all p-0.5 rounded"
               title="新建清单"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -302,7 +298,7 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
 
           <div className="space-y-0.5 mt-0.5">
             {isAddingList && (
-              <div className="px-3 py-1.5 flex items-center gap-2">
+              <div ref={newListContainerRef} className="px-3 py-1.5 flex items-center gap-2">
                 <input
                   ref={newListInputRef}
                   type="text"
@@ -313,11 +309,11 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
                     if (e.key === 'Escape') setIsAddingList(false);
                   }}
                   placeholder="清单名称"
-                  className="flex-1 bg-white border border-[#1890FF] rounded px-2 py-1 text-sm outline-none"
+                  className="flex-1 bg-white border border-[var(--dida-primary)] rounded px-2 py-1 text-sm outline-none"
                 />
                 <button 
                   onClick={handleCreateList}
-                  className="p-1 text-[#1890FF] hover:bg-blue-50 rounded"
+                  className="p-1 text-[var(--dida-primary)] hover:bg-[var(--dida-primary-light)] rounded"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
@@ -328,8 +324,8 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
                 key={list.id}
                 onClick={() => setSelectedListId(list.id)}
                 className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md transition-colors ${selectedListId === list.id
-                  ? 'bg-[#E6F7FF] text-[#1890FF]'
-                  : 'text-gray-700 hover:bg-gray-200'
+                  ? 'bg-[var(--dida-primary-light)] text-[var(--dida-primary)]'
+                  : 'text-[var(--dida-text-main)] hover:bg-[var(--dida-bg-hover)]'
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -347,19 +343,19 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
         <div className="mt-6">
           <div 
             onClick={() => setIsTagsExpanded(!isTagsExpanded)}
-            className="px-1 py-1.5 flex items-center justify-between group cursor-pointer hover:bg-gray-100 rounded-md transition-colors"
+            className="px-1 py-1.5 flex items-center justify-between group cursor-pointer hover:bg-[var(--dida-bg-hover)] rounded-md transition-colors"
           >
             <div className="flex items-center gap-0.5">
-              <div className="w-5 h-5 flex items-center justify-center text-gray-400">
+              <div className="w-5 h-5 flex items-center justify-center text-[var(--dida-text-tertiary)]">
                 {isTagsExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
               </div>
-              <div className="text-[12px] font-bold text-gray-500 tracking-wider">
+              <div className="text-[12px] font-bold text-[var(--dida-text-tertiary)] tracking-wider">
                 标签
               </div>
             </div>
             <div className="flex items-center gap-1">
               <button
-                className="text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-gray-200"
+                className="text-[var(--dida-text-tertiary)] hover:text-[var(--dida-text-secondary)] opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-[var(--dida-border-light)]"
                 title="更多操作"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -373,7 +369,7 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
                   e.stopPropagation();
                   setIsAddTagModalOpen(true);
                 }}
-                className="text-gray-400 hover:text-[#1890FF] opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-gray-200"
+                className="text-[var(--dida-text-tertiary)] hover:text-[var(--dida-primary)] opacity-0 group-hover:opacity-100 transition-all p-1 rounded hover:bg-[var(--dida-border-light)]"
                 title="新建标签"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -386,7 +382,7 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
               {tagTree.map((node) => renderTag(node))}
 
               {tagTree.length === 0 && (
-                <div className="px-3 py-2 text-xs text-gray-400 italic">暂无标签</div>
+                <div className="px-3 py-2 text-xs text-[var(--dida-text-tertiary)] italic">暂无标签</div>
               )}
             </div>
           )}

@@ -2,14 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { useAppStore } from '../../store/useAppStore';
 import ReminderModal from './ReminderModal';
-
-const REMINDER_OFFSETS: Record<string, number> = {
-  'on_time': 0,
-  '5m_before': 5 * 60,
-  '30m_before': 30 * 60,
-  '1h_before': 60 * 60,
-  '1d_before': 24 * 60 * 60,
-};
+import { REMINDER_OFFSETS } from '../../constants/reminders';
 
 export default function ReminderManager() {
   const { data: tasks } = useTasks();

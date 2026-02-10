@@ -3,16 +3,27 @@
 @layer base {
   :root {
     --dida-primary: #1890FF;
-    --dida-sidebar: #F5F5F5;
-    --dida-highlight: #E6F7FF;
+    --dida-primary-rgb: 24, 144, 255;
+    --dida-primary-hover: #40A9FF;
+    --dida-primary-active: #096DD9;
+    --dida-primary-light: #E6F7FF;
+    --dida-sidebar: #FAFAFA;
+    --dida-tag-default: #CBD5E0;
     --dida-text-main: #333333;
     --dida-text-secondary: #888888;
+    --dida-text-tertiary: #A0A0A0;
+    --dida-border-light: #F0F0F0;
+    --dida-bg-hover: #F5F5F5;
 
     /* 优先级颜色 */
     --priority-high: #FF4D4F;
+    --priority-high-hover: #FF7875;
     --priority-medium: #FFA940;
+    --priority-medium-hover: #FFC069;
     --priority-low: #40A9FF;
+    --priority-low-hover: #69C0FF;
     --priority-none: #D9D9D9;
+    --priority-none-hover: #BFBFBF;
 
     font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'STHeiti', 'Microsoft Yahei', Tahoma, Simsun, sans-serif;
     line-height: 1.5;
@@ -78,8 +89,8 @@
 
   /* 已完成状态样式 */
   .dida-checkbox.completed {
-    border-color: #D1D1D1 !important;
-    background-color: #D1D1D1 !important;
+    border-color: var(--dida-text-tertiary) !important;
+    background-color: var(--dida-text-tertiary) !important;
   }
 
   .dida-checkbox.completed::after {

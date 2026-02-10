@@ -5,11 +5,13 @@ import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
 import { GripVertical, MoreHorizontal, RotateCcw, XCircle, Bell } from 'lucide-react';
-import { format } from 'date-fns';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import TaskContextMenu from './TaskContextMenu';
 import DatePicker from '../Common/DatePicker';
+import { getPriorityClass, getPriorityBgColor, getPriorityColor } from '../../utils/priority';
+import { useClickOutside } from '../../hooks/useClickOutside';
+import { formatTaskDate, formatTaskDateTime, isOverdue } from '../../utils/date';
 
 interface TaskItemProps {
   task: Task;
@@ -36,18 +38,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const datePickerRef = useRef<HTMLDivElement>(null);
 
   // 处理点击外部关闭日期选择器
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node) &&
-          dateTriggerRef.current && !dateTriggerRef.current.contains(event.target as Node)) {
-        setShowDatePicker(false);
-      }
-    };
-    if (showDatePicker) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showDatePicker]);
+  useClickOutside([datePickerRef, dateTriggerRef], () => setShowDatePicker(false), showDatePicker);
 
   // 当窗口大小改变时，如果日期选择器开启，则关闭它或重新计算位置
   useEffect(() => {
@@ -206,25 +197,6 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
     setShowDatePicker(false);
   };
 
-  const getPriorityClass = (priority: Priority) => {
-    switch (priority) {
-      case Priority.High: return 'priority-high';
-      case Priority.Medium: return 'priority-medium';
-      case Priority.Low: return 'priority-low';
-      default: return 'priority-none';
-    }
-  };
-
-  // 直接使用全局 CSS 变量，保证和优先级颜色 100% 一致
-  const getPriorityColorVar = (priority: Priority) => {
-    switch (priority) {
-      case Priority.High: return 'var(--priority-high)';
-      case Priority.Medium: return 'var(--priority-medium)';
-      case Priority.Low: return 'var(--priority-low)';
-      default: return 'var(--priority-none)';
-    }
-  };
-
   return (
     <>
       <div
@@ -235,8 +207,8 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
         }}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        className={`group flex items-center gap-1 px-1 py-1.5 border-b border-gray-50 cursor-pointer transition-colors ${isSelected ? 'bg-[#F0F7FF]' : 'hover:bg-[#FAFAFA]'
-          } ${isDragging ? 'opacity-50 shadow-lg bg-white ring-1 ring-blue-100 rounded-sm' : ''}`}
+        className={`group flex items-center gap-1 px-1 py-1.5 border-b border-gray-50 cursor-pointer transition-colors ${isSelected ? 'bg-[var(--dida-primary-light)]' : 'hover:bg-[var(--dida-bg-hover)]'
+          } ${isDragging ? 'opacity-50 shadow-lg bg-white ring-1 ring-[rgba(var(--dida-primary-rgb),0.2)] rounded-sm' : ''}`}
       >
         {/* 拖拽手柄 - 悬浮可见 */}
         <div
@@ -254,11 +226,9 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
             className={`dida-checkbox ${getPriorityClass(task.priority)} ${task.completed ? 'completed' : ''}`}
             style={{
               // 仅在未完成时设置边框颜色
-              borderColor: !task.completed ? getPriorityColorVar(task.priority) : undefined,
+              borderColor: !task.completed ? getPriorityColor(task.priority) : undefined,
               // 未完成时使用极浅的背景（几乎透明），已完成时在 CSS 中统一处理为灰色
-              backgroundColor: !task.completed 
-                ? 'color-mix(in srgb, ' + getPriorityColorVar(task.priority) + ' 5%, transparent)' 
-                : undefined,
+              backgroundColor: getPriorityBgColor(task.priority, !!task.completed),
             }}
           />
         </div>
@@ -283,7 +253,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
               .map(({ tagId, tag }) => (
                 <span
                   key={tagId}
-                  className="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-medium flex items-center justify-center leading-none"
+                  className="text-[10px] px-1 py-0.5 rounded bg-[var(--dida-bg-hover)] text-[var(--dida-text-secondary)] font-medium flex items-center justify-center leading-none"
                   style={{ color: tag!.color, backgroundColor: `${tag!.color}15` }}
                 >
                   #{tag!.name}
@@ -291,29 +261,29 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
               ))}
             {task.tags.filter(tagId => allTags?.find(t => t.id === tagId)).length > 2 && (
               <div className="relative group/tag flex items-center h-full">
-                <span className="text-[10px] px-1 py-0.5 rounded bg-gray-50 text-gray-400 font-medium border border-gray-100 cursor-default flex items-center justify-center leading-none">
+                <span className="text-[10px] px-1 py-0.5 rounded bg-[var(--dida-sidebar)] text-[var(--dida-text-tertiary)] font-medium border border-[var(--dida-border-light)] cursor-default flex items-center justify-center leading-none">
                   +{task.tags.filter(tagId => allTags?.find(t => t.id === tagId)).length - 2}
                 </span>
                 
                 {/* 悬浮显示的隐藏标签列表 */}
                 <div className="absolute top-full right-0 mt-2 hidden group-hover/tag:block z-[100] animate-in fade-in zoom-in-95 duration-150">
-                  <div className="bg-white border border-gray-100 shadow-xl rounded-lg p-2 w-max max-w-[300px]">
+                  <div className="bg-white border border-[var(--dida-border-light)] shadow-xl rounded-lg p-2 w-max max-w-[300px]">
                     <div className="flex flex-row flex-wrap gap-1.5">
                       {task.tags
                         .map(tagId => ({ tagId, tag: allTags?.find(t => t.id === tagId) }))
                         .filter(item => item.tag)
                         .slice(2)
                         .map(({ tagId, tag }) => (
-                          <div key={tagId} className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-gray-50 border border-gray-100/50 whitespace-nowrap">
+                          <div key={tagId} className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-[var(--dida-sidebar)] border border-[var(--dida-border-light)] whitespace-nowrap">
                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag!.color }} />
-                            <span className="text-[11px] text-gray-600">
+                            <span className="text-[11px] text-[var(--dida-text-main)]">
                               {tag!.name}
                             </span>
                           </div>
                         ))}
                     </div>
                     {/* 小三角箭头 */}
-                    <div className="absolute bottom-full right-4 w-2 h-2 bg-white border-l border-t border-gray-100 rotate-45 translate-y-1" />
+                    <div className="absolute bottom-full right-4 w-2 h-2 bg-white border-l border-t border-[var(--dida-border-light)] rotate-45 translate-y-1" />
                   </div>
                 </div>
               </div>
@@ -326,68 +296,19 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
           <div 
             ref={dateTriggerRef}
             onClick={handleDateClick}
-            title={(() => {
-              if (!task.due_date) return '';
-              const date = new Date(task.due_date * 1000);
-              const dateStr = format(date, 'yyyy年M月d日');
-              const timeStr = (date.getHours() !== 0 || date.getMinutes() !== 0) ? `, ${format(date, 'HH:mm')}` : '';
-              const now = new Date();
-              let dayPrefix = '';
-              if (date.toDateString() === now.toDateString()) dayPrefix = '今天, ';
-              else if (date.toDateString() === new Date(now.getTime() + 86400000).toDateString()) dayPrefix = '明天, ';
-              return `${dayPrefix}${dateStr}${timeStr}`;
-            })()}
-            className={`flex-shrink-0 flex items-center gap-1 text-[11px] font-medium px-2 hover:bg-gray-100 rounded py-0.5 transition-colors cursor-pointer ${
-              (() => {
-                if (!task.due_date || task.completed) return 'text-gray-400';
-                const now = new Date();
-                now.setHours(0, 0, 0, 0);
-                const taskDate = new Date(task.due_date * 1000);
-                taskDate.setHours(0, 0, 0, 0);
-                return taskDate.getTime() < now.getTime() ? 'text-[#FF4D4F]' : 'text-gray-400';
-              })()
-            }`}
+            title={task.due_date ? formatTaskDateTime(task.due_date) : ''}
+            className={`flex-shrink-0 flex items-center gap-1 text-[11px] font-medium px-2 hover:bg-[var(--dida-bg-hover)] rounded py-0.5 transition-colors cursor-pointer ${
+            !task.completed && isOverdue(task.due_date) ? 'text-[var(--priority-high)]' : 'text-[var(--dida-text-secondary)]'
+          }`}
           >
             {task.reminder && task.reminder !== 'none' && (
               <Bell className={`w-3 h-3 ${
-                (() => {
-                  if (!task.due_date || task.completed) return 'text-gray-400';
-                  const now = new Date();
-                  now.setHours(0, 0, 0, 0);
-                  const taskDate = new Date(task.due_date * 1000);
-                  taskDate.setHours(0, 0, 0, 0);
-                  return taskDate.getTime() < now.getTime() ? 'text-[#FF4D4F]' : 'text-gray-400';
-                })()
-              }`} />
+                  !task.completed && isOverdue(task.due_date) ? 'text-[var(--priority-high)]' : 'text-[var(--dida-text-secondary)]'
+                }`} />
             )}
             {task.due_date && (
               <span>
-                {(() => {
-                  const date = new Date(task.due_date * 1000);
-                  const now = new Date();
-                  const isToday = date.toDateString() === now.toDateString();
-                  
-                  // 检查是否有具体时间（不只是零点）
-                  const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
-                  
-                  if (isToday) {
-                    return hasTime ? format(date, 'HH:mm') : '今天';
-                  }
-                  
-                  // 检查是否是明天
-                  const tomorrow = new Date();
-                  tomorrow.setDate(now.getDate() + 1);
-                  if (date.toDateString() === tomorrow.toDateString()) {
-                    return '明天';
-                  }
-
-                  // 检查是否是今年
-                  if (date.getFullYear() === now.getFullYear()) {
-                    return format(date, 'M月d日');
-                  }
-                  
-                  return format(date, 'yyyy年M月d日');
-                })()}
+                {formatTaskDate(task.due_date)}
               </span>
             )}
           </div>
@@ -400,14 +321,14 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
               <button
                 title="恢复"
                 onClick={handleRestore}
-                className="p-1 px-1.5 hover:bg-blue-50 rounded text-gray-400 hover:text-blue-500 transition-colors"
+                className="p-1 px-1.5 hover:bg-[var(--dida-primary-light)] rounded text-[var(--dida-text-secondary)] hover:text-[var(--dida-primary)] transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
               <button
                 title="永久删除"
                 onClick={handleDeletePermanently}
-                className="p-1 px-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-colors"
+                className="p-1 px-1.5 hover:bg-red-50 rounded text-[var(--dida-text-secondary)] hover:text-[var(--priority-high)] transition-colors"
               >
                 <XCircle className="w-3.5 h-3.5" />
               </button>
@@ -417,7 +338,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
               <button
                 title="更多"
                 onClick={handleContextMenu}
-                className="p-1 px-1.5 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-1 px-1.5 hover:bg-[var(--dida-bg-hover)] rounded text-[var(--dida-text-secondary)] hover:text-[var(--dida-text-main)] transition-colors"
               >
                 <MoreHorizontal className="w-3.5 h-3.5" />
               </button>
@@ -446,12 +367,14 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
       {showDatePicker && datePickerPos && (
         <div 
           ref={datePickerRef}
-          className="fixed z-[1000] shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+          className="fixed z-[1000] shadow-2xl animate-in zoom-in-95 duration-75"
           style={{ 
             top: datePickerPos.top !== undefined ? `${datePickerPos.top}px` : 'auto',
             bottom: datePickerPos.bottom !== undefined ? `${datePickerPos.bottom}px` : 'auto',
             left: datePickerPos.left !== undefined ? `${datePickerPos.left}px` : 'auto',
-            right: datePickerPos.right !== undefined ? `${datePickerPos.right}px` : 'auto'
+            right: datePickerPos.right !== undefined ? `${datePickerPos.right}px` : 'auto',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px'
           }}
           onClick={(e) => e.stopPropagation()}
         >

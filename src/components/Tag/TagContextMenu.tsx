@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { Edit2, ArrowUp, Plus, Merge, Share2, Trash2 } from 'lucide-react';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 interface TagContextMenuProps {
   x: number;
@@ -28,15 +29,7 @@ export default function TagContextMenu({
 }: TagContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
+  useClickOutside([menuRef], onClose, true);
 
   // 确保菜单不超出屏幕
   const adjustedX = Math.min(x, window.innerWidth - 200);
@@ -54,7 +47,7 @@ export default function TagContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[1000] w-48 bg-white rounded-xl shadow-2xl border border-gray-100 py-1.5 animate-in fade-in zoom-in-95 duration-100"
+      className="fixed z-[1000] w-48 bg-white rounded-xl shadow-2xl border border-[var(--dida-border-light)] py-1.5 animate-in fade-in zoom-in-95 duration-100"
       style={{ top: adjustedY, left: adjustedX }}
     >
       {menuItems.map((item, index) => (
@@ -68,10 +61,10 @@ export default function TagContextMenu({
           className={`w-full flex items-center gap-3 px-4 py-2 text-[14px] transition-colors ${
             item.danger
               ? 'text-red-500 hover:bg-red-50'
-              : 'text-gray-700 hover:bg-gray-50'
+              : 'text-[var(--dida-text-main)] hover:bg-[var(--dida-bg-hover)]'
           }`}
         >
-          <span className={item.danger ? 'text-red-500' : 'text-gray-400'}>
+          <span className={item.danger ? 'text-red-500' : 'text-[var(--dida-text-tertiary)]'}>
             {item.icon}
           </span>
           {item.label}

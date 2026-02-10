@@ -56,7 +56,7 @@ export default function ContextMenu({ x, y, onClose, children }: ContextMenuProp
     return (
         <div
             ref={menuRef}
-            className="fixed z-[9999] bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden min-w-[160px]"
+            className="fixed z-[9999] bg-white border border-[var(--dida-border-light)] rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden min-w-[160px]"
             style={{ left: pos.left, top: pos.top }}
             onContextMenu={(e) => e.preventDefault()}
         >
@@ -87,18 +87,18 @@ export function ContextMenuItem({
                 onClick();
             }}
             className={`w-full flex items-center gap-3 px-3.5 py-2 text-[13px] transition-colors ${active
-                    ? 'bg-blue-50 text-blue-600'
+                    ? 'bg-[var(--dida-primary-light)] text-[var(--dida-primary)]'
                     : danger
                         ? 'text-red-500 hover:bg-red-50'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        : 'text-[var(--dida-text-main)] hover:bg-[var(--dida-bg-hover)]'
                 }`}
         >
-            {icon && <span className={`${active ? 'text-blue-500' : 'text-gray-400'}`}>{icon}</span>}
+            {icon && <span className={`${active ? 'text-[var(--dida-primary)]' : 'text-[var(--dida-text-tertiary)]'}`}>{icon}</span>}
             <span className="flex-1 text-left font-medium">{label}</span>
         </button>
     );
 }
 
 export function ContextMenuSeparator() {
-    return <div className="h-px bg-gray-100 my-1 mx-1" />;
+    return <div className="h-px bg-[var(--dida-border-light)] my-1 mx-1" />;
 }

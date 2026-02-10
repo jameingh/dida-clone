@@ -26,7 +26,7 @@ export default function Toast() {
               toast.onAction?.();
               hideToast();
             }}
-            className="flex items-center gap-1.5 text-[#FFA940] hover:text-[#FFC069] transition-colors text-sm font-bold"
+            className="flex items-center gap-1.5 text-[var(--priority-medium)] hover:text-[var(--priority-medium-hover)] transition-colors text-sm font-bold"
           >
             {toast.actionLabel}
             <Undo2 className="w-4 h-4" />

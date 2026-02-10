@@ -71,7 +71,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         
         {/* Resizer Divider */}
         <div 
-          className={`w-[2px] h-full cursor-col-resize transition-colors z-50 hover:bg-[#1890FF] active:bg-[#1890FF] ${isResizing ? 'bg-[#1890FF]' : 'bg-transparent hover:delay-150'}`}
+          className={`w-[2px] h-full cursor-col-resize transition-colors z-50 hover:bg-[var(--dida-primary)] active:bg-[var(--dida-primary-active)] ${isResizing ? 'bg-[var(--dida-primary)]' : 'bg-transparent hover:delay-150'}`}
           onMouseDown={startResizing}
         />
       </div>

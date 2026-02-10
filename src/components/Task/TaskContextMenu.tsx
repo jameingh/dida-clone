@@ -23,6 +23,7 @@ import {
 import { Task, Priority } from '../../types';
 import ContextMenu, { ContextMenuSeparator } from '../Common/ContextMenu';
 import TagSelectorPopover from './TagSelectorPopover';
+import { getPriorityTextClass, getPriorityBgColor } from '../../utils/priority';
 
 interface TaskContextMenuProps {
   x: number;
@@ -92,41 +93,41 @@ export default function TaskContextMenu({
 
   return (
     <ContextMenu x={x} y={y} onClose={onClose}>
-      <div className="w-[220px] bg-white rounded-lg overflow-hidden">
+      <div className="w-[220px] bg-white rounded-lg overflow-hidden shadow-xl border border-[var(--dida-border-light)]">
         {/* 日期部分 */}
         <div className="px-3 py-2">
-          <div className="text-[11px] text-gray-400 mb-2">日期</div>
+          <div className="text-[11px] text-[var(--dida-text-tertiary)] mb-2">日期</div>
           <div className="flex items-center justify-between px-1">
             <button 
               onClick={() => { onSetDate(0); onClose(); }}
-              className="p-1.5 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+              className="p-1.5 hover:bg-[var(--dida-bg-hover)] rounded-md text-[var(--dida-text-secondary)] transition-colors"
               title="今天"
             >
               <Sun className="w-4 h-4" />
             </button>
             <button 
               onClick={() => { onSetDate(1); onClose(); }}
-              className="p-1.5 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+              className="p-1.5 hover:bg-[var(--dida-bg-hover)] rounded-md text-[var(--dida-text-secondary)] transition-colors"
               title="明天"
             >
               <Sunrise className="w-4 h-4" />
             </button>
             <button 
               onClick={() => { onSetDate(7); onClose(); }}
-              className="p-1.5 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+              className="p-1.5 hover:bg-[var(--dida-bg-hover)] rounded-md text-[var(--dida-text-secondary)] transition-colors"
               title="下周"
             >
               <CalendarDays className="w-4 h-4" />
             </button>
             <button 
               onClick={() => { onSetDate(30); onClose(); }}
-              className="p-1.5 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+              className="p-1.5 hover:bg-[var(--dida-bg-hover)] rounded-md text-[var(--dida-text-secondary)] transition-colors"
               title="下月"
             >
               <CalendarRange className="w-4 h-4" />
             </button>
             <button 
-              className="p-1.5 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+              className="p-1.5 hover:bg-[var(--dida-bg-hover)] rounded-md text-[var(--dida-text-secondary)] transition-colors"
               title="选择日期"
             >
               <Calendar className="w-4 h-4" />
@@ -138,32 +139,36 @@ export default function TaskContextMenu({
 
         {/* 优先级部分 */}
         <div className="px-3 py-2">
-          <div className="text-[11px] text-gray-400 mb-2">优先级</div>
+          <div className="text-[11px] text-[var(--dida-text-tertiary)] mb-2">优先级</div>
           <div className="flex items-center justify-between px-1">
             <button 
               onClick={() => { onSetPriority(Priority.High); onClose(); }}
-              className={`p-1.5 hover:bg-gray-100 rounded-md transition-colors ${task.priority === Priority.High ? 'text-red-500 bg-red-50' : 'text-red-500'}`}
+              className={`p-1.5 hover:bg-[var(--dida-bg-hover)] rounded-md transition-colors ${getPriorityTextClass(Priority.High)}`}
+              style={{ backgroundColor: task.priority === Priority.High ? getPriorityBgColor(Priority.High, false) : undefined }}
               title="高优先级"
             >
               <Flag className="w-4 h-4 fill-current" />
             </button>
             <button 
               onClick={() => { onSetPriority(Priority.Medium); onClose(); }}
-              className={`p-1.5 hover:bg-gray-100 rounded-md transition-colors ${task.priority === Priority.Medium ? 'text-orange-500 bg-orange-50' : 'text-orange-500'}`}
+              className={`p-1.5 hover:bg-[var(--dida-bg-hover)] rounded-md transition-colors ${getPriorityTextClass(Priority.Medium)}`}
+              style={{ backgroundColor: task.priority === Priority.Medium ? getPriorityBgColor(Priority.Medium, false) : undefined }}
               title="中优先级"
             >
               <Flag className="w-4 h-4 fill-current" />
             </button>
             <button 
               onClick={() => { onSetPriority(Priority.Low); onClose(); }}
-              className={`p-1.5 hover:bg-gray-100 rounded-md transition-colors ${task.priority === Priority.Low ? 'text-blue-500 bg-blue-50' : 'text-blue-500'}`}
+              className={`p-1.5 hover:bg-[var(--dida-bg-hover)] rounded-md transition-colors ${getPriorityTextClass(Priority.Low)}`}
+              style={{ backgroundColor: task.priority === Priority.Low ? getPriorityBgColor(Priority.Low, false) : undefined }}
               title="低优先级"
             >
               <Flag className="w-4 h-4 fill-current" />
             </button>
             <button 
               onClick={() => { onSetPriority(Priority.None); onClose(); }}
-              className={`p-1.5 hover:bg-gray-100 rounded-md transition-colors ${task.priority === Priority.None ? 'text-gray-400 bg-gray-50' : 'text-gray-400'}`}
+              className={`p-1.5 hover:bg-[var(--dida-bg-hover)] rounded-md transition-colors ${getPriorityTextClass(Priority.None)}`}
+              style={{ backgroundColor: task.priority === Priority.None ? getPriorityBgColor(Priority.None, false) : undefined }}
               title="无优先级"
             >
               <Flag className="w-4 h-4" />
@@ -214,13 +219,13 @@ function MenuItem({ icon, label, onClick, danger, hasSubmenu }: MenuItemProps) {
         e.stopPropagation();
         onClick();
       }}
-      className={`w-full flex items-center gap-3 px-3 py-1.5 text-[13px] hover:bg-gray-100 transition-colors ${
-        danger ? 'text-red-500' : 'text-gray-700'
+      className={`w-full flex items-center gap-3 px-3 py-1.5 text-[13px] hover:bg-[var(--dida-bg-hover)] transition-colors ${
+        danger ? 'text-red-500' : 'text-[var(--dida-text-main)]'
       }`}
     >
-      <span className={`${danger ? 'text-red-500' : 'text-gray-500'}`}>{icon}</span>
+      <span className={`${danger ? 'text-red-500' : 'text-[var(--dida-text-tertiary)]'}`}>{icon}</span>
       <span className="flex-1 text-left">{label}</span>
-      {hasSubmenu && <ChevronRight className="w-3.5 h-3.5 text-gray-400" />}
+      {hasSubmenu && <ChevronRight className="w-3.5 h-3.5 text-[var(--dida-text-tertiary)]" />}
     </button>
   );
 }

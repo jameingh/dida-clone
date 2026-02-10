@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   X, 
-  Search, 
   Tag as TagIcon, 
   ChevronDown, 
   ChevronRight, 
@@ -10,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Tag } from '../../types';
 import { useTags, useCreateTag } from '../../hooks/useTags';
+import { getRandomTagColor } from '../../constants/colors';
 
 interface TagSelectorPopoverProps {
   selectedTagIds: string[];
@@ -110,12 +110,9 @@ export default function TagSelectorPopover({
     if (!searchValue.trim()) return;
     
     try {
-      const colors = ['#FF4D4F', '#FF7A45', '#FFA940', '#FFC53D', '#FFEC3D', '#BAE637', '#73D13D', '#5CDBD3', '#40A9FF', '#597EF7', '#9254DE', '#F759AB'];
-      const randomColor = colors[Math.floor(Math.random() * colors.length)];
-      
       const newTag = await createTag.mutateAsync({ 
         name: searchValue.trim(), 
-        color: randomColor 
+        color: getRandomTagColor() 
       });
       
       if (newTag) {
@@ -136,7 +133,7 @@ export default function TagSelectorPopover({
       <div key={node.id} className="flex flex-col">
         <button
           onClick={() => toggleTagSelection(node.id)}
-          className="w-full flex items-center justify-between py-1.5 px-2 hover:bg-gray-100 rounded-md transition-colors group"
+          className="w-full flex items-center justify-between py-1.5 px-2 hover:bg-[var(--dida-bg-hover)] rounded-md transition-colors group"
           style={{ paddingLeft: `${level * 16 + 8}px` }}
         >
           <div className="flex items-center gap-2 overflow-hidden">
@@ -144,18 +141,18 @@ export default function TagSelectorPopover({
               {hasChildren ? (
                 <div 
                   onClick={(e) => toggleTagExpanded(node.id, e)}
-                  className="w-4 h-4 flex items-center justify-center hover:bg-gray-200 rounded transition-colors mr-1"
+                  className="w-4 h-4 flex items-center justify-center hover:bg-[var(--dida-border-light)] rounded transition-colors mr-1"
                 >
                   {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 </div>
               ) : (
                 <div className="w-5" /> 
               )}
-              <TagIcon className="w-4 h-4 text-gray-400 shrink-0" />
+              <TagIcon className="w-4 h-4 text-[var(--dida-text-tertiary)] shrink-0" />
             </div>
-            <span className="text-[13px] text-gray-700 truncate">{node.name}</span>
+            <span className="text-[13px] text-[var(--dida-text-secondary)] truncate">{node.name}</span>
           </div>
-          {isSelected && <Check className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
+          {isSelected && <Check className="w-3.5 h-3.5 text-[var(--dida-primary)] shrink-0" />}
         </button>
         {hasChildren && isExpanded && (
           <div className="flex flex-col">
@@ -171,17 +168,17 @@ export default function TagSelectorPopover({
   return (
     <div className="w-[240px] flex flex-col max-h-[400px]">
       {/* 头部：已选标签和搜索 */}
-      <div className="p-2 border-b border-gray-50">
+      <div className="p-2 border-b border-[var(--dida-border-light)]">
         <div className="flex flex-wrap gap-1.5 mb-2 max-h-[100px] overflow-y-auto">
           {selectedTagsData.map(tag => (
             <div 
               key={tag.id}
-              className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[12px] group"
+              className="flex items-center gap-1 px-1.5 py-0.5 bg-[rgba(var(--dida-primary-rgb),0.1)] text-[var(--dida-primary)] rounded text-[12px] group"
             >
               <span className="truncate max-w-[80px]">{tag.name}</span>
               <button 
                 onClick={(e) => { e.stopPropagation(); removeTag(tag.id); }}
-                className="hover:bg-blue-100 rounded-sm transition-colors"
+                className="hover:bg-[rgba(var(--dida-primary-rgb),0.2)] rounded-sm transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -199,26 +196,26 @@ export default function TagSelectorPopover({
                 }
               }}
               placeholder={selectedTagIds.length === 0 ? "输入标签" : ""}
-              className="w-full text-[13px] outline-none py-0.5 placeholder:text-gray-300"
+              className="w-full text-[13px] outline-none py-0.5 placeholder:text-[var(--dida-text-tertiary)]"
             />
           </div>
         </div>
       </div>
 
       {/* 标签列表 */}
-      <div className="flex-1 overflow-y-auto py-1">
+      <div className="flex-1 overflow-y-auto p-1 custom-scrollbar">
         {filteredTags.length > 0 ? (
           filteredTags.map(node => renderTagItem(node))
         ) : !showCreateOption && (
-          <div className="px-4 py-8 text-center text-gray-400 text-[13px]">
-            没有找到相关标签
+          <div className="py-4 text-center text-[12px] text-[var(--dida-text-tertiary)]">
+            无匹配标签
           </div>
         )}
 
         {showCreateOption && (
           <button
             onClick={handleCreateTag}
-            className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-blue-500 transition-colors"
+            className="w-full flex items-center gap-2 py-2 px-2 hover:bg-[var(--dida-bg-hover)] text-[var(--dida-primary)] rounded-md transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span className="text-[13px]">创建标签 "{searchValue}"</span>
@@ -227,16 +224,16 @@ export default function TagSelectorPopover({
       </div>
 
       {/* 底部按钮 */}
-      <div className="p-2 border-t border-gray-50 flex items-center justify-end gap-2">
-        <button 
+      <div className="p-2 border-t border-[var(--dida-border-light)] flex justify-end gap-2">
+        <button
           onClick={onCancel}
-          className="px-3 py-1.5 text-[13px] text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+          className="px-3 py-1 text-[13px] text-[var(--dida-text-secondary)] hover:bg-[var(--dida-bg-hover)] rounded transition-colors"
         >
           取消
         </button>
-        <button 
+        <button
           onClick={() => onConfirm(selectedTagIds)}
-          className="px-4 py-1.5 text-[13px] text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors font-medium"
+          className="px-3 py-1 text-[13px] bg-[var(--dida-primary)] text-white hover:bg-[var(--dida-primary-dark)] rounded transition-colors"
         >
           确定
         </button>

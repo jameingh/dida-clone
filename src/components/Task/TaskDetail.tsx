@@ -2,13 +2,17 @@ import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useU
 import { useTags, useCreateTag } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, Square, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Minus, Paperclip, Workflow, Link2, Search } from 'lucide-react';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Minus, Paperclip, Workflow, Link2, Search } from 'lucide-react';
 import { Priority, Task } from '../../types';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import SubtaskItem from './SubtaskItem';
 import DatePicker from '../Common/DatePicker';
 import { useLists } from '../../hooks/useLists';
 import { useQueryClient } from '@tanstack/react-query';
+import { useClickOutside } from '../../hooks/useClickOutside';
+import { getPriorityColor, getPriorityClass, getPriorityBgColor, getPriorityLabel, getPriorityTextClass } from '../../utils/priority';
+import { formatTaskDateTime, isOverdue } from '../../utils/date';
+import { getRandomTagColor } from '../../constants/colors';
 
 import {
   DndContext,
@@ -119,24 +123,6 @@ export default function TaskDetail() {
     { icon: Link2, label: '关联任务/笔记', section: 'action' },
   ], []);
 
-  const getPriorityClass = (priority: Priority) => {
-    switch (priority) {
-      case Priority.High: return 'priority-high';
-      case Priority.Medium: return 'priority-medium';
-      case Priority.Low: return 'priority-low';
-      default: return 'priority-none';
-    }
-  };
-
-  const getPriorityColorVar = (priority: Priority) => {
-    switch (priority) {
-      case Priority.High: return 'var(--priority-high)';
-      case Priority.Medium: return 'var(--priority-medium)';
-      case Priority.Low: return 'var(--priority-low)';
-      default: return 'var(--priority-none)';
-    }
-  };
-
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (task) {
@@ -216,75 +202,18 @@ export default function TaskDetail() {
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
-  // 点击外部关闭 Popover
+  // 使用自定义 hook 处理点击外部关闭 Popover
+  useClickOutside([tagPopoverRef, tagTriggerRef], () => setIsTagPopoverOpen(false), isTagPopoverOpen);
+  useClickOutside([priorityPopoverRef, priorityTriggerRef], () => setIsPriorityPopoverOpen(false), isPriorityPopoverOpen);
+  useClickOutside([datePickerRef, dateTriggerRef], () => setIsDatePickerOpen(false), isDatePickerOpen);
+  useClickOutside([moreMenuRef, moreMenuTriggerRef], () => setIsMoreMenuOpen(false), isMoreMenuOpen);
+  useClickOutside([slashMenuRef], () => setIsSlashMenuOpen(false), isSlashMenuOpen);
+
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      // 标签 Popover
-      if (
-        isTagPopoverOpen &&
-        tagPopoverRef.current &&
-        !tagPopoverRef.current.contains(target) &&
-        tagTriggerRef.current &&
-        !tagTriggerRef.current.contains(target)
-      ) {
-        setIsTagPopoverOpen(false);
-      }
-      
-      // 优先级 Popover
-      if (
-        isPriorityPopoverOpen &&
-        priorityPopoverRef.current &&
-        !priorityPopoverRef.current.contains(target) &&
-        priorityTriggerRef.current &&
-        !priorityTriggerRef.current.contains(target)
-      ) {
-        setIsPriorityPopoverOpen(false);
-      }
-
-      // 日期选择器 Popover
-      if (
-        isDatePickerOpen &&
-        datePickerRef.current &&
-        !datePickerRef.current.contains(target) &&
-        dateTriggerRef.current &&
-        !dateTriggerRef.current.contains(target)
-      ) {
-        setIsDatePickerOpen(false);
-      }
-
-      // 更多菜单 Popover
-    if (
-      isMoreMenuOpen &&
-      moreMenuRef.current &&
-      !moreMenuRef.current.contains(target) &&
-      moreMenuTriggerRef.current &&
-      !moreMenuTriggerRef.current.contains(target)
-    ) {
-      setIsMoreMenuOpen(false);
+    if (task && !isEditingDescription) {
+      setDescriptionValue(task.description || '');
     }
-
-    // Slash 菜单 Popover
-    if (
-      isSlashMenuOpen &&
-      slashMenuRef.current &&
-      !slashMenuRef.current.contains(target)
-    ) {
-      setIsSlashMenuOpen(false);
-    }
-  };
-
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
-  };
-}, [isTagPopoverOpen, isPriorityPopoverOpen, isDatePickerOpen, isMoreMenuOpen, isSlashMenuOpen]);
-
-useEffect(() => {
-  if (task && !isEditingDescription) {
-    setDescriptionValue(task.description || '');
-  }
-}, [task?.description, isEditingDescription]);
+  }, [task?.description, isEditingDescription]);
 
 useEffect(() => {
   if (isEditingDescription) {
@@ -420,11 +349,7 @@ const handleDescriptionBlur = () => {
     if (!name || !task) return;
 
     try {
-      // 随机生成一个颜色，或者默认一个颜色
-      const colors = ['#FF4D4F', '#FF7A45', '#FFA940', '#FFC53D', '#FFEC3D', '#BAE637', '#73D13D', '#5CDBD3', '#40A9FF', '#597EF7', '#9254DE', '#F759AB'];
-      const randomColor = colors[Math.floor(Math.random() * colors.length)];
-      
-      const newTag = await createTag.mutateAsync({ name, color: randomColor });
+      const newTag = await createTag.mutateAsync({ name, color: getRandomTagColor() });
       if (newTag) {
         handleToggleTag(newTag.id);
         setTagSearchValue('');
@@ -464,14 +389,15 @@ const handleDescriptionBlur = () => {
   };
 
   const handleDateChange = (timestamp: number | undefined, reminder?: string) => {
-        if (!task) return;
-        updateTask.mutate({
-            ...task,
-            due_date: timestamp || null,
-            reminder: reminder || null
-        });
-        setIsDatePickerOpen(false);
-    };
+    if (task) {
+      updateTask.mutate({
+        ...task,
+        due_date: timestamp || null,
+        reminder: reminder || 'none',
+      });
+    }
+    setIsDatePickerOpen(false);
+  };
 
   const handleDelete = () => {
     if (task) {
@@ -500,31 +426,6 @@ const handleDescriptionBlur = () => {
         }
       });
     }
-  };
-
-  const formatDate = (timestamp: number | null) => {
-    if (!timestamp) return '设置日期';
-    const date = new Date(timestamp * 1000);
-    const now = new Date();
-    
-    // 格式化日期部分
-    let dateStr = '';
-    if (date.getFullYear() === now.getFullYear()) {
-      dateStr = `${date.getMonth() + 1}月${date.getDate()}日`;
-    } else {
-      dateStr = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
-    }
-
-    // 检查是否有时间部分（如果小时和分钟都是0，且后端约定00:00表示没设置时间，则不显示）
-    // 但在滴答清单中，如果用户设置了时间，就会显示。
-    // 我们这里简单判断：如果不是 00:00，就显示时间
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    if (hours !== 0 || minutes !== 0) {
-      dateStr += ` ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    }
-    
-    return dateStr;
   };
 
   if (!selectedTaskId) {
@@ -583,10 +484,8 @@ const handleDescriptionBlur = () => {
               onClick={handleToggle}
               className={`dida-checkbox ${getPriorityClass(task.priority)} ${task.completed ? 'completed' : ''}`}
               style={{
-                borderColor: getPriorityColorVar(task.priority),
-                backgroundColor: task.completed
-                  ? getPriorityColorVar(task.priority)
-                  : 'color-mix(in srgb, ' + getPriorityColorVar(task.priority) + ' 18%, #ffffff 82%)',
+                borderColor: getPriorityColor(task.priority),
+                backgroundColor: getPriorityBgColor(task.priority, !!task.completed),
                 width: '18px',
                 height: '18px',
               }}
@@ -602,15 +501,15 @@ const handleDescriptionBlur = () => {
               className="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
             >
               {(() => {
-                const isOverdue = task.due_date && (new Date(task.due_date * 1000).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0));
-                const iconColor = isOverdue ? 'text-[#FF4D4F]' : (task.due_date ? 'text-[#1890FF]' : 'text-gray-400');
-                const textColor = isOverdue ? 'text-[#FF4D4F]' : (task.due_date ? 'text-gray-700' : 'text-gray-400');
+                const overdue = !task.completed && isOverdue(task.due_date);
+                const iconColor = overdue ? 'text-[var(--priority-high)]' : (task.due_date ? 'text-[var(--dida-primary)]' : 'text-gray-400');
+                const textColor = overdue ? 'text-[var(--priority-high)]' : (task.due_date ? 'text-gray-700' : 'text-gray-400');
                 
                 return (
                   <>
                     <Calendar className={`w-4 h-4 ${iconColor}`} />
                     <span className={`text-[13px] font-medium ${textColor}`}>
-                      {formatDate(task.due_date)}
+                      {task.due_date ? formatTaskDateTime(task.due_date) : '日期'}
                     </span>
                   </>
                 );
@@ -637,29 +536,21 @@ const handleDescriptionBlur = () => {
               className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
               title="设置优先级"
             >
-              <Flag className={`w-4 h-4 ${task.priority === Priority.High ? 'text-red-500 fill-red-500' :
-                task.priority === Priority.Medium ? 'text-orange-500 fill-orange-500' :
-                  task.priority === Priority.Low ? 'text-blue-500 fill-blue-500' : 'text-gray-400'
-                }`} />
+              <Flag className={`w-4 h-4 ${getPriorityTextClass(task.priority)} ${task.priority !== Priority.None ? 'fill-current' : ''}`} />
             </button>
             {isPriorityPopoverOpen && (
               <div
                 ref={priorityPopoverRef}
                 className="absolute top-full right-0 mt-1 w-32 bg-white border border-gray-100 shadow-xl rounded-lg p-1 z-50"
               >
-                {[
-                  { value: Priority.High, label: '高优先级', color: 'text-red-500' },
-                  { value: Priority.Medium, label: '中优先级', color: 'text-orange-500' },
-                  { value: Priority.Low, label: '低优先级', color: 'text-blue-500' },
-                  { value: Priority.None, label: '无优先级', color: 'text-gray-400' },
-                ].map((p) => (
+                {[Priority.High, Priority.Medium, Priority.Low, Priority.None].map((p) => (
                   <div
-                    key={p.value}
-                    onClick={() => handlePriorityChange(p.value)}
+                    key={p}
+                    onClick={() => handlePriorityChange(p)}
                     className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 rounded-md cursor-pointer transition-colors"
                   >
-                    <Flag className={`w-3.5 h-3.5 ${p.color} ${task.priority === p.value ? 'fill-current' : ''}`} />
-                    <span className="text-[12px] text-gray-700">{p.label}</span>
+                    <Flag className={`w-3.5 h-3.5 ${getPriorityTextClass(p)} ${task.priority === p ? 'fill-current' : ''}`} />
+                    <span className="text-[12px] text-gray-700">{getPriorityLabel(p)}优先级</span>
                   </div>
                 ))}
               </div>
@@ -806,7 +697,7 @@ const handleDescriptionBlur = () => {
           <div className="flex gap-2">
             <button
               onClick={handleRestore}
-              className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#1890FF] text-white rounded-md hover:bg-[#40a9ff] transition-colors text-[13px] font-medium shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 py-2 bg-[var(--dida-primary)] text-white rounded-md hover:bg-[#40a9ff] transition-colors text-[13px] font-medium shadow-sm"
             >
               <RotateCcw className="w-4 h-4" />
               恢复任务
@@ -864,7 +755,7 @@ const handleDescriptionBlur = () => {
                         className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-gray-50 transition-colors text-left group"
                       >
                         <div className="w-6 h-6 flex items-center justify-center rounded-md bg-gray-50 group-hover:bg-white border border-transparent group-hover:border-gray-100 transition-all">
-                          <item.icon className="w-3.5 h-3.5 text-gray-500 group-hover:text-[#1890FF]" />
+                          <item.icon className="w-3.5 h-3.5 text-gray-500 group-hover:text-[var(--dida-primary)]" />
                         </div>
                         <span className="text-[12px] text-gray-600 group-hover:text-gray-900">{item.label}</span>
                       </button>
@@ -919,7 +810,7 @@ const handleDescriptionBlur = () => {
                 <button
                   ref={tagTriggerRef}
                   onClick={() => setIsTagPopoverOpen(!isTagPopoverOpen)}
-                  className="inline-flex items-center px-1.5 py-0.5 text-gray-400 hover:text-[#1890FF] hover:bg-blue-50 rounded transition-colors"
+                  className="inline-flex items-center px-1.5 py-0.5 text-gray-400 hover:text-[var(--dida-primary)] hover:bg-blue-50 rounded transition-colors"
                   title="添加标签"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -965,7 +856,7 @@ const handleDescriptionBlur = () => {
                       {showCreateOption && (
                         <div
                           onClick={handleCreateAndAddTag}
-                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-[#F0F7FF] rounded-md cursor-pointer transition-colors text-[#1890FF]"
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-[#F0F7FF] rounded-md cursor-pointer transition-colors text-[var(--dida-primary)]"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span className="text-[13px]">创建标签 "{tagSearchValue}"</span>
@@ -1012,7 +903,7 @@ const handleDescriptionBlur = () => {
 
           {!isTrashView && (
             <form onSubmit={handleAddSubtask} className="flex items-center gap-2 py-1 px-2 group">
-              <Plus className="w-4 h-4 text-gray-300 group-hover:text-[#1890FF] transition-colors" />
+              <Plus className="w-4 h-4 text-gray-300 group-hover:text-[var(--dida-primary)] transition-colors" />
               <input
                 type="text"
                 value={newSubtaskTitle}

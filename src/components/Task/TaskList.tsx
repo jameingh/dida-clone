@@ -13,8 +13,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { Plus, Calendar, ChevronDown, MoreHorizontal, Flag, Hash, X, Check, Trash2, Inbox, Paperclip, Copy, Settings, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { useTasks, useCreateTaskExtended, useUpdateTaskOrders, useEmptyTrash, useSubtasks } from '../../hooks/useTasks';
+import { Plus, Calendar, ChevronDown, Flag, Hash, X, Check, Trash2, Inbox, Paperclip, Copy, Settings, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useTasks, useCreateTaskExtended, useUpdateTaskOrders, useEmptyTrash } from '../../hooks/useTasks';
 import { useTags, useCreateTag, useUpdateTag } from '../../hooks/useTags';
 import { useLists } from '../../hooks/useLists';
 import { Task } from '../../types';
@@ -49,12 +49,17 @@ function TaskTreeItem({ task, allTasks, depth = 0 }: TaskTreeItemProps) {
   );
 }
 
+import { SMART_LIST_IDS } from '../../constants/smartLists';
+import { useClickOutside } from '../../hooks/useClickOutside';
+import { formatTaskDateTime } from '../../utils/date';
+import { getPriorityLabel, getPriorityTextClass } from '../../utils/priority';
+import { groupTasks, getSortedGroupNames } from '../../utils/taskGrouping';
+import { Priority } from '../../types';
+
 export default function TaskList() {
   const { 
     selectedListId, 
     selectedTagId, 
-    setSelectedTaskId, 
-    setSelectedListId, 
     isSidebarCollapsed, 
     toggleSidebar 
   } = useAppStore();
@@ -132,43 +137,13 @@ export default function TaskList() {
     return () => window.removeEventListener('focus-task-input', handleFocus);
   }, []);
 
-  // 点击外部关闭弹层
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      
-      if (showDatePicker && datePickerRef.current && !datePickerRef.current.contains(target)) {
-        setShowDatePicker(false);
-      }
-      if (showMoreMenu && moreMenuRef.current && !moreMenuRef.current.contains(target)) {
-        // 如果点击的是子菜单，不关闭主菜单
-        if (
-          (tagMenuRef.current && tagMenuRef.current.contains(target)) ||
-          (listMenuRef.current && listMenuRef.current.contains(target))
-        ) {
-          return;
-        }
-        setShowMoreMenu(false);
-        setShowTagMenu(false);
-        setShowListMenu(false);
-      }
-    };
-
-    if (showDatePicker || showMoreMenu) {
-      document.addEventListener('mousedown', handleClickOutside, true); // 使用捕获阶段，防止某些冒泡被阻止的情况
-      return () => document.removeEventListener('mousedown', handleClickOutside, true);
-    }
-  }, [showDatePicker, showMoreMenu]);
-
-  // 日期格式化函数
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp * 1000);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    return `${month}月${day}日, ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  };
+  // 使用自定义 hook 处理点击外部关闭弹层
+  useClickOutside([datePickerRef], () => setShowDatePicker(false), showDatePicker);
+  useClickOutside([moreMenuRef], () => {
+    setShowMoreMenu(false);
+    setShowTagMenu(false);
+    setShowListMenu(false);
+  }, showMoreMenu);
 
   const handleAddTask = async (e?: React.FormEvent) => {
     if (e) {
@@ -203,7 +178,7 @@ export default function TaskList() {
           } else {
             // 创建新标签
             try {
-               const newTag = await createTag.mutateAsync({ name: tagName, color: '#87d068' });
+               const newTag = await createTag.mutateAsync({ name: tagName, color: 'var(--dida-tag-default)' });
                tagsToAssign.add(newTag.id);
             } catch (error) {
                console.error('Failed to create tag:', error);
@@ -249,24 +224,6 @@ export default function TaskList() {
     );
   };
 
-  const getPriorityColor = (priority?: number) => {
-    switch (priority) {
-      case 3: return 'text-red-500';
-      case 2: return 'text-yellow-500';
-      case 1: return 'text-blue-500';
-      default: return 'text-gray-400';
-    }
-  };
-
-  const getPriorityLabel = (priority?: number) => {
-    switch (priority) {
-      case 3: return '高';
-      case 2: return '中';
-      case 1: return '低';
-      default: return '无';
-    }
-  };
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -293,34 +250,32 @@ export default function TaskList() {
     updateTaskOrders.mutate(ascendingOrders);
   };
 
-  const isTrashView = selectedListId === 'smart_trash';
-  const isCompletedView = selectedListId === 'smart_completed';
-  const isAllView = selectedListId === 'smart_all';
-  const isTodayView = selectedListId === 'smart_today';
-  const isWeekView = selectedListId === 'smart_week';
+  const isTrashView = selectedListId === SMART_LIST_IDS.TRASH;
+  const isCompletedView = selectedListId === SMART_LIST_IDS.COMPLETED;
+  const isAllView = selectedListId === SMART_LIST_IDS.ALL;
+  const isTodayView = selectedListId === SMART_LIST_IDS.TODAY;
+  const isWeekView = selectedListId === SMART_LIST_IDS.WEEK;
 
-  // 辅助函数：判断日期分组
-  const getTaskGroup = (task: Task) => {
-    if (task.completed) return '已完成';
-    if (!task.due_date) return '无日期';
-    
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const taskDate = new Date(task.due_date * 1000);
-    taskDate.setHours(0, 0, 0, 0);
+  // 统一分组逻辑
+  const taskGroups = useMemo(() => {
+    let strategy: 'all' | 'today' | 'week' | 'none' = 'none';
+    if (isAllView) strategy = 'all';
+    else if (isTodayView) strategy = 'today';
+    else if (isWeekView) strategy = 'week';
 
-    if (taskDate.getTime() < now.getTime()) return '已过期';
-    if (taskDate.getTime() === now.getTime()) return '今天';
-    return '更远';
-  };
+    if (strategy === 'none') return null;
+
+    const groups = groupTasks(localTasks, strategy);
+    const sortedNames = getSortedGroupNames(groups);
+
+    return sortedNames.map(name => ({
+      name,
+      tasks: groups[name]
+    }));
+  }, [localTasks, isAllView, isTodayView, isWeekView]);
 
   const incompleteTasks = localTasks.filter((task) => {
     if (task.completed) return false;
-    if (isTrashView || isCompletedView) return true;
-    if (selectedTagId) {
-      // 在标签视图下，如果父任务也在当前匹配列表中，则子任务不作为根节点显示，避免重复
-      return !task.parent_id || !localTasks.some(t => t.id === task.parent_id);
-    }
     return !task.parent_id;
   });
 
@@ -334,114 +289,6 @@ export default function TaskList() {
     return !task.parent_id;
   });
 
-  // “所有任务”视图下的分组逻辑
-  const allViewGroups = useMemo(() => {
-    if (!isAllView) return null;
-    
-    const groups: Record<string, Task[]> = {
-      '已过期': [],
-      '今天': [],
-      '更远': [],
-      '无日期': [],
-      '已完成': []
-    };
-
-    // 只对根任务进行分组，子任务通过 TaskTreeItem 递归显示
-    const rootTasks = localTasks.filter(t => !t.parent_id);
-    
-    rootTasks.forEach(task => {
-      const groupName = getTaskGroup(task);
-      groups[groupName].push(task);
-    });
-
-    return groups;
-  }, [localTasks, isAllView]);
-
-  // “今天”视图下的分组逻辑
-  const todayViewGroups = useMemo(() => {
-    if (!isTodayView) return null;
-    
-    const groups: Record<string, Task[]> = {
-      '已过期': [],
-      '今天': [],
-      '已完成': []
-    };
-
-    // 同样只对根任务分组
-    const rootTasks = localTasks.filter(t => !t.parent_id);
-    
-    rootTasks.forEach(task => {
-      const groupName = getTaskGroup(task);
-      // 如果是在今天视图中，且任务不在预设的三个组内（比如误入了更远或无日期的任务，虽然逻辑上不该出现）
-      // 我们可以将其归入适当的组或忽略，这里我们只处理这三个
-      if (groups[groupName]) {
-        groups[groupName].push(task);
-      }
-    });
-
-    return groups;
-  }, [localTasks, isTodayView]);
-
-  // “最近7天”视图下的分组逻辑
-  const weekViewGroups = useMemo(() => {
-    if (!isWeekView) return null;
-    
-    const groups: Record<string, Task[]> = {};
-    const rootTasks = localTasks.filter(t => !t.parent_id);
-
-    rootTasks.forEach(task => {
-      let groupName = '';
-      if (task.completed) {
-        groupName = '已完成';
-      } else if (!task.due_date) {
-        groupName = '无日期';
-      } else {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const taskDate = new Date(task.due_date * 1000);
-        taskDate.setHours(0, 0, 0, 0);
-        
-        const diffDays = Math.round((taskDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (diffDays < 0) {
-          groupName = '已过期';
-        } else if (diffDays === 0) {
-          groupName = '今天';
-        } else if (diffDays === 1) {
-          groupName = '明天';
-        } else {
-          const weekday = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][taskDate.getDay()];
-          groupName = `${taskDate.getMonth() + 1}月${taskDate.getDate()}日 ${weekday}`;
-        }
-      }
-      
-      if (!groups[groupName]) groups[groupName] = [];
-      groups[groupName].push(task);
-    });
-
-    // 排序分组
-    const sortedGroupNames = Object.keys(groups).sort((a, b) => {
-      if (a === '已过期') return -1;
-      if (b === '已过期') return 1;
-      if (a === '今天') return -1;
-      if (b === '今天') return 1;
-      if (a === '明天') return -1;
-      if (b === '明天') return 1;
-      if (a === '已完成') return 1;
-      if (b === '已完成') return -1;
-      
-      const dateA = groups[a][0].due_date || 0;
-      const dateB = groups[b][0].due_date || 0;
-      return dateA - dateB;
-    });
-
-    const sortedGroups: Record<string, Task[]> = {};
-    sortedGroupNames.forEach(name => {
-      sortedGroups[name] = groups[name];
-    });
-
-    return sortedGroups;
-  }, [localTasks, isWeekView]);
   const hideInput = isTrashView || isCompletedView;
 
   // 辅助函数：根据优先级获取颜色已选属性是否存在的标记
@@ -490,7 +337,7 @@ export default function TaskList() {
                 onChange={(e) => setTitleInputValue(e.target.value)}
                 onBlur={handleTitleSave}
                 onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
-                className="text-2xl font-bold text-gray-800 outline-none border-b-2 border-[#1890FF] pb-1 bg-transparent"
+                className="text-2xl font-bold text-gray-800 outline-none border-b-2 border-[var(--dida-primary)] pb-1 bg-transparent"
               />
             ) : (
               <h1
@@ -528,12 +375,15 @@ export default function TaskList() {
 
       {/* 顶部快速添加栏 - 垃圾桶和已完成视图下隐藏 */}
       {!hideInput && (
-        <div className="px-4 py-3 shrink-0">
-          <form onSubmit={handleAddTask} className="relative">
-            <div className={`flex flex-col bg-[#F1F1F1] focus-within:bg-white border-2 border-transparent focus-within:border-[#1890FF]/30 rounded-xl transition-all group ${hasAttributes ? 'pb-2' : ''}`}>
+        <div className={`px-4 py-3 shrink-0 relative ${showDatePicker || showMoreMenu ? 'z-[100]' : 'z-10'}`}>
+          <form 
+            onSubmit={handleAddTask} 
+            className="relative"
+          >
+            <div className={`flex flex-col bg-[#F1F1F1] focus-within:bg-white border-2 border-transparent focus-within:border-[var(--dida-primary)]/30 rounded-xl transition-all group ${hasAttributes ? 'pb-2' : ''}`}>
               {/* 输入区域 */}
               <div className="flex items-center gap-2 px-3 py-2">
-                <Plus className={`w-5 h-5 transition-colors shrink-0 ${newTaskPriority ? getPriorityColor(newTaskPriority) : 'text-gray-400 group-focus-within:text-[#1890FF]'}`} />
+                <Plus className={`w-5 h-5 transition-colors shrink-0 ${newTaskPriority ? getPriorityTextClass(newTaskPriority as Priority) : 'text-gray-400 group-focus-within:text-[var(--dida-primary)]'}`} />
                 <input
                   ref={inputRef}
                   type="text"
@@ -550,12 +400,12 @@ export default function TaskList() {
                     <button
                       type="button"
                       onClick={() => setShowDatePicker(!showDatePicker)}
-                      className="flex items-center gap-1 px-1.5 py-1 text-[13px] text-gray-400 hover:text-[#1890FF] hover:bg-blue-50 rounded-lg transition-colors shrink-0"
+                      className="flex items-center gap-1 px-1.5 py-1 text-[13px] text-gray-400 hover:text-[var(--dida-primary)] hover:bg-blue-50 rounded-lg transition-colors shrink-0"
                     >
                       {newTaskDueDate ? (
                         <>
-                          <span className="text-[#1890FF] font-medium">{formatDate(newTaskDueDate)}</span>
-                          <ChevronDown className="w-3.5 h-3.5 text-[#1890FF]" />
+                          <span className="text-[var(--dida-primary)] font-medium">{formatTaskDateTime(newTaskDueDate)}</span>
+                          <ChevronDown className="w-3.5 h-3.5 text-[var(--dida-primary)]" />
                         </>
                       ) : (
                         <Calendar className="w-4.5 h-4.5" />
@@ -564,7 +414,7 @@ export default function TaskList() {
 
                     {/* 日期选择器浮层 */}
                     {showDatePicker && (
-                      <div ref={datePickerRef} className="absolute top-full right-0 mt-2 z-50">
+                      <div ref={datePickerRef} className="absolute top-full right-0 mt-2 z-[200] shadow-2xl rounded-xl bg-white">
                         <DatePicker
                           selectedDate={newTaskDueDate}
                           reminder={newTaskReminder}
@@ -591,7 +441,7 @@ export default function TaskList() {
 
                     {/* 更多菜单浮层 */}
                     {showMoreMenu && (
-                      <div ref={moreMenuRef} className="absolute top-full right-0 mt-2 w-52 bg-white shadow-xl rounded-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                      <div ref={moreMenuRef} className="absolute top-full right-0 mt-2 w-52 bg-white shadow-xl rounded-xl border border-gray-100 py-2 z-[200] animate-in fade-in zoom-in-95 duration-100">
                         {/* 优先级选择 - 顶部行 */}
                         <div className="px-3 pb-2 mb-1 border-b border-gray-50">
                           <div className="text-[11px] font-bold text-gray-400 mb-2 uppercase tracking-tighter">优先级</div>
@@ -663,7 +513,7 @@ export default function TaskList() {
                                       }}
                                       className="w-full flex items-center gap-3 px-3 py-1.5 hover:bg-gray-50 transition-colors text-left"
                                     >
-                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: list.color || '#1890FF' }} />
+                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: list.color || 'var(--dida-primary)' }} />
                                       <span className="text-[13px] text-gray-600 truncate">{list.name}</span>
                                     </button>
                                   ))}
@@ -762,9 +612,9 @@ export default function TaskList() {
                 <div className="flex flex-wrap gap-2 px-10 pb-1">
                   {/* 优先级 Chip */}
                   {newTaskPriority !== undefined && (
-                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-gray-100/50 hover:bg-gray-100 cursor-default ${getPriorityColor(newTaskPriority)}`}>
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-gray-100/50 hover:bg-gray-100 cursor-default ${getPriorityTextClass(newTaskPriority as Priority)}`}>
                       <Flag className="w-3 h-3" fill="currentColor" />
-                      {getPriorityLabel(newTaskPriority)}
+                      {getPriorityLabel(newTaskPriority as Priority)}
                       <button
                         type="button"
                         onClick={() => {
@@ -783,7 +633,7 @@ export default function TaskList() {
                     const tag = allTags?.find(t => t.id === tagId);
                     if (!tag) return null;
                     return (
-                      <span key={tagId} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-blue-50 text-[#1890FF] hover:bg-blue-100 cursor-default">
+                      <span key={tagId} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-blue-50 text-[var(--dida-primary)] hover:bg-blue-100 cursor-default">
                         <Hash className="w-3 h-3" />
                         {tag.name}
                         <button
@@ -814,52 +664,14 @@ export default function TaskList() {
           onDragEnd={handleDragEnd}
           modifiers={[restrictToVerticalAxis]}
         >
-          {isAllView && allViewGroups ? (
-            /* “所有任务”分组视图 */
+          {taskGroups ? (
+            /* 分组视图 (所有/今天/最近7天) */
             <div className="pb-10">
-              {(Object.entries(allViewGroups) as [string, Task[]][]).map(([groupName, tasks]) => (
+              {taskGroups.map(({ name, tasks }) => (
                 tasks.length > 0 && (
-                  <div key={groupName} className="mb-6">
+                  <div key={name} className="mb-6">
                     <div className="px-4 py-2 text-[13px] font-bold text-gray-900 flex items-center gap-2">
-                      <span>{groupName}</span>
-                      <span className="font-normal text-[11px] text-gray-400">({tasks.length})</span>
-                    </div>
-                    <div>
-                      {tasks.map((task: Task) => (
-                        <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
-                      ))}
-                    </div>
-                  </div>
-                )
-              ))}
-            </div>
-          ) : isTodayView && todayViewGroups ? (
-            /* “今天”分组视图 */
-            <div className="pb-10">
-              {(Object.entries(todayViewGroups) as [string, Task[]][]).map(([groupName, tasks]) => (
-                tasks.length > 0 && (
-                  <div key={groupName} className="mb-6">
-                    <div className="px-4 py-2 text-[13px] font-bold text-gray-900 flex items-center gap-2">
-                      <span>{groupName}</span>
-                      <span className="font-normal text-[11px] text-gray-400">({tasks.length})</span>
-                    </div>
-                    <div>
-                       {tasks.map((task: Task) => (
-                         <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
-                       ))}
-                     </div>
-                   </div>
-                 )
-               ))}
-             </div>
-          ) : isWeekView && weekViewGroups ? (
-            /* “最近7天”分组视图 */
-            <div className="pb-10">
-              {(Object.entries(weekViewGroups) as [string, Task[]][]).map(([groupName, tasks]) => (
-                tasks.length > 0 && (
-                  <div key={groupName} className="mb-6">
-                    <div className="px-4 py-2 text-[13px] font-bold text-gray-900 flex items-center gap-2">
-                      <span>{groupName}</span>
+                      <span>{name}</span>
                       <span className="font-normal text-[11px] text-gray-400">({tasks.length})</span>
                     </div>
                     <div>
