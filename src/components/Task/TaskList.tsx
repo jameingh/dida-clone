@@ -25,24 +25,25 @@ import DatePicker from '../Common/DatePicker';
 
 interface TaskTreeItemProps {
   task: Task;
+  allTasks: Task[];
   depth?: number;
 }
 
-function TaskTreeItem({ task, depth = 0 }: TaskTreeItemProps) {
-  const { data: subtasks } = useSubtasks(task.id);
-  const incompleteSubtasks = subtasks?.filter(t => !t.is_deleted && !t.completed) || [];
-  const completedSubtasks = subtasks?.filter(t => !t.is_deleted && t.completed) || [];
+function TaskTreeItem({ task, allTasks, depth = 0 }: TaskTreeItemProps) {
+  const subtasks = allTasks.filter(t => t.parent_id === task.id);
+  const incompleteSubtasks = subtasks.filter(t => !t.is_deleted && !t.completed);
+  const completedSubtasks = subtasks.filter(t => !t.is_deleted && t.completed);
 
   return (
     <div className="flex flex-col">
       <TaskItem task={task} depth={depth} />
       {/* 渲染未完成的子任务 */}
       {incompleteSubtasks.map(subtask => (
-        <TaskTreeItem key={subtask.id} task={subtask} depth={depth + 1} />
+        <TaskTreeItem key={subtask.id} task={subtask} allTasks={allTasks} depth={depth + 1} />
       ))}
       {/* 渲染已完成的子任务 */}
       {completedSubtasks.map(subtask => (
-        <TaskTreeItem key={subtask.id} task={subtask} depth={depth + 1} />
+        <TaskTreeItem key={subtask.id} task={subtask} allTasks={allTasks} depth={depth + 1} />
       ))}
     </div>
   );
@@ -678,7 +679,7 @@ export default function TaskList() {
                 (isTrashView || isCompletedView) ? (
                   <TaskItem key={task.id} task={task} />
                 ) : (
-                  <TaskTreeItem key={task.id} task={task} />
+                  <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
                 )
               ))}
             </div>
@@ -695,7 +696,7 @@ export default function TaskList() {
                   (isTrashView || isCompletedView) ? (
                     <TaskItem key={task.id} task={task} />
                   ) : (
-                    <TaskTreeItem key={task.id} task={task} />
+                    <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
                   )
                 ))}
               </div>
