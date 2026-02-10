@@ -9,6 +9,7 @@ interface ContextMenuProps {
 
 export default function ContextMenu({ x, y, onClose, children }: ContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
+    const [pos, setPos] = React.useState({ left: x, top: y });
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -28,14 +29,35 @@ export default function ContextMenu({ x, y, onClose, children }: ContextMenuProp
     }, [onClose]);
 
     // 边界检查：确保不超出窗口
-    const adjustedX = Math.min(x, window.innerWidth - 200);
-    const adjustedY = Math.min(y, window.innerHeight - 300);
+    useEffect(() => {
+        if (menuRef.current) {
+            const rect = menuRef.current.getBoundingClientRect();
+            let adjustedX = x;
+            let adjustedY = y;
+
+            // 检查右侧边界
+            if (x + rect.width > window.innerWidth) {
+                adjustedX = window.innerWidth - rect.width - 8;
+            }
+
+            // 检查底部边界
+            if (y + rect.height > window.innerHeight) {
+                adjustedY = window.innerHeight - rect.height - 8;
+            }
+
+            // 确保不超出左侧和顶部
+            adjustedX = Math.max(8, adjustedX);
+            adjustedY = Math.max(8, adjustedY);
+
+            setPos({ left: adjustedX, top: adjustedY });
+        }
+    }, [x, y]);
 
     return (
         <div
             ref={menuRef}
             className="fixed z-[9999] bg-white border border-gray-100 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden min-w-[160px]"
-            style={{ left: adjustedX, top: adjustedY }}
+            style={{ left: pos.left, top: pos.top }}
             onContextMenu={(e) => e.preventDefault()}
         >
             {children}
