@@ -115,17 +115,17 @@ export default function Sidebar({ width = 240 }: SidebarProps) {
 
     switch (id) {
       case 'smart_inbox':
-        return <Inbox {...iconProps} className={`${iconProps.className} text-blue-500`} />;
+        return <Inbox {...iconProps} />;
       case 'smart_today':
-        return <Calendar {...iconProps} className={`${iconProps.className} text-orange-500`} />;
+        return <Calendar {...iconProps} />;
       case 'smart_week':
-        return <CalendarDays {...iconProps} className={`${iconProps.className} text-purple-500`} />;
+        return <CalendarDays {...iconProps} />;
       case 'smart_all':
-        return <ClipboardList {...iconProps} className={`${iconProps.className} text-emerald-500`} />;
+        return <ClipboardList {...iconProps} />;
       case 'smart_completed':
-        return <CheckCircle2 {...iconProps} className={`${iconProps.className} text-green-500`} />;
+        return <CheckCircle2 {...iconProps} />;
       case 'smart_trash':
-        return <Trash2 {...iconProps} className={`${iconProps.className} text-gray-400`} />;
+        return <Trash2 {...iconProps} />;
       default:
         return null;
     }
