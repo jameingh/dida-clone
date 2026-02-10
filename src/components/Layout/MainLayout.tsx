@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import NavRail from './NavRail';
 import { useShortcuts } from '../../hooks/useShortcuts';
+import { useAppStore } from '../../store/useAppStore';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ const DEFAULT_SIDEBAR_WIDTH = 240;
 
 export default function MainLayout({ children }: MainLayoutProps) {
   useShortcuts();
+  const { isSidebarCollapsed } = useAppStore();
   
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebarWidth');
@@ -63,13 +65,19 @@ export default function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="flex h-screen bg-white overflow-hidden">
       <NavRail />
-      <Sidebar width={sidebarWidth} />
       
-      {/* Resizer Divider */}
       <div 
-        className={`w-[2px] h-full cursor-col-resize transition-colors z-50 hover:bg-[#1890FF] active:bg-[#1890FF] ${isResizing ? 'bg-[#1890FF]' : 'bg-transparent hover:delay-150'}`}
-        onMouseDown={startResizing}
-      />
+        className={`flex transition-all duration-300 ease-in-out overflow-hidden ${isSidebarCollapsed ? 'w-0' : ''}`}
+        style={{ width: isSidebarCollapsed ? 0 : sidebarWidth }}
+      >
+        <Sidebar width={sidebarWidth} />
+        
+        {/* Resizer Divider */}
+        <div 
+          className={`w-[2px] h-full cursor-col-resize transition-colors z-50 hover:bg-[#1890FF] active:bg-[#1890FF] ${isResizing ? 'bg-[#1890FF]' : 'bg-transparent hover:delay-150'}`}
+          onMouseDown={startResizing}
+        />
+      </div>
 
       <main className="flex-1 flex flex-col overflow-hidden bg-white">
         {children}

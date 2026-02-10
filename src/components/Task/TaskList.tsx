@@ -13,7 +13,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { Plus, Calendar, ChevronDown, MoreHorizontal, Flag, Hash, X, Check, Trash2, Inbox, Paperclip, Copy, Settings, ChevronRight } from 'lucide-react';
+import { Plus, Calendar, ChevronDown, MoreHorizontal, Flag, Hash, X, Check, Trash2, Inbox, Paperclip, Copy, Settings, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useTasks, useCreateTaskExtended, useUpdateTaskOrders, useEmptyTrash, useSubtasks } from '../../hooks/useTasks';
 import { useTags, useCreateTag, useUpdateTag } from '../../hooks/useTags';
 import { useLists } from '../../hooks/useLists';
@@ -50,7 +50,14 @@ function TaskTreeItem({ task, allTasks, depth = 0 }: TaskTreeItemProps) {
 }
 
 export default function TaskList() {
-  const { selectedListId, selectedTagId } = useAppStore();
+  const { 
+    selectedListId, 
+    selectedTagId, 
+    setSelectedTaskId, 
+    setSelectedListId, 
+    isSidebarCollapsed, 
+    toggleSidebar 
+  } = useAppStore();
   const { data: tasks } = useTasks(selectedListId || undefined, selectedTagId || undefined);
   const { data: allTags } = useTags();
   const { data: lists } = useLists();
@@ -466,7 +473,14 @@ export default function TaskList() {
     <div className="h-full flex flex-col bg-white">
       {/* 顶部标题栏 */}
       <div className="px-6 py-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleSidebar}
+            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors text-gray-400 hover:text-gray-600"
+            title={isSidebarCollapsed ? "显示侧边栏" : "收起侧边栏"}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+          </button>
           {selectedTagId ? (
             isEditingTitle ? (
               <input

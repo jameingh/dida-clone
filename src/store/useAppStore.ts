@@ -13,6 +13,7 @@ interface AppState {
     visible: boolean;
   };
   activeReminderTask: Task | null;
+  isSidebarCollapsed: boolean;
   setSelectedListId: (id: string | null) => void;
   setSelectedTagId: (id: string | null) => void;
   setSelectedTaskId: (id: string | null) => void;
@@ -20,6 +21,8 @@ interface AppState {
   showToast: (message: string, actionLabel?: string, onAction?: () => void) => void;
   hideToast: () => void;
   setActiveReminderTask: (task: Task | null) => void;
+  toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -32,6 +35,7 @@ export const useAppStore = create<AppState>((set) => ({
     visible: false,
   },
   activeReminderTask: null,
+  isSidebarCollapsed: false,
   setSelectedListId: (id) => set({ 
     selectedListId: id, 
     selectedTagId: null,
@@ -51,4 +55,6 @@ export const useAppStore = create<AppState>((set) => ({
     toast: { ...state.toast, visible: false }
   })),
   setActiveReminderTask: (task) => set({ activeReminderTask: task }),
+  toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
+  setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
 }));
