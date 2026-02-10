@@ -27,6 +27,42 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
 export default function TaskDetail() {
   const { selectedTaskId, setSelectedTaskId, selectedListId } = useAppStore();
+  
+  // 拉伸宽度管理
+  const [width, setWidth] = useState(400); // 默认宽度
+  const [isResizing, setIsResizing] = useState(false);
+  const minWidth = 350; // 最小宽度安全区
+  const maxWidth = 800; // 最大宽度安全区
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   const { showAlert } = useAlertStore();
   const queryClient = useQueryClient();
   const { data: task, isLoading } = useTask(selectedTaskId || '');
@@ -495,7 +531,15 @@ const handleDescriptionBlur = () => {
 
   if (!selectedTaskId) {
     return (
-      <div className="w-96 border-l border-gray-200 bg-white flex items-center justify-center">
+      <div 
+        style={{ width: `${width}px` }}
+        className="border-l border-gray-200 bg-white flex items-center justify-center relative flex-shrink-0"
+      >
+        {/* 左侧拉伸条 */}
+        <div
+          onMouseDown={() => setIsResizing(true)}
+          className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400/30 transition-colors z-50"
+        />
         <div className="text-center text-gray-400">
           <div className="text-4xl mb-2">📋</div>
           <div className="text-sm">选择一个任务查看详情</div>
@@ -506,7 +550,15 @@ const handleDescriptionBlur = () => {
 
   if (isLoading) {
     return (
-      <div className="w-96 border-l border-gray-200 bg-white flex items-center justify-center">
+      <div 
+        style={{ width: `${width}px` }}
+        className="border-l border-gray-200 bg-white flex items-center justify-center relative flex-shrink-0"
+      >
+        {/* 左侧拉伸条 */}
+        <div
+          onMouseDown={() => setIsResizing(true)}
+          className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400/30 transition-colors z-50"
+        />
         <div className="text-gray-500">加载中...</div>
       </div>
     );
@@ -515,7 +567,15 @@ const handleDescriptionBlur = () => {
   if (!task) return null;
 
   return (
-    <div className="w-96 border-l border-gray-200 bg-white flex flex-col relative">
+    <div 
+      style={{ width: `${width}px` }}
+      className="border-l border-gray-200 bg-white flex flex-col relative flex-shrink-0"
+    >
+      {/* 左侧拉伸条 */}
+      <div
+        onMouseDown={() => setIsResizing(true)}
+        className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400/30 transition-colors z-50"
+      />
       {/* 头部 */}
       <div className="flex items-center justify-between p-2 border-b border-gray-100 h-12">
         <div className="flex items-center gap-2">
