@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -288,6 +288,23 @@ export default function TaskList() {
 
   const isTrashView = selectedListId === 'smart_trash';
   const isCompletedView = selectedListId === 'smart_completed';
+  const isAllView = selectedListId === 'smart_all';
+
+  // 辅助函数：判断日期分组
+  const getTaskGroup = (task: Task) => {
+    if (task.completed) return '已完成';
+    if (!task.due_date) return '无日期';
+    
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const taskDate = new Date(task.due_date * 1000);
+    taskDate.setHours(0, 0, 0, 0);
+
+    if (taskDate.getTime() < now.getTime()) return '已过期';
+    if (taskDate.getTime() === now.getTime()) return '今天';
+    return '更远';
+  };
+
   const incompleteTasks = localTasks.filter((task) => {
     if (task.completed) return false;
     if (isTrashView || isCompletedView) return true;
@@ -307,6 +324,29 @@ export default function TaskList() {
     }
     return !task.parent_id;
   });
+
+  // “所有任务”视图下的分组逻辑
+  const allViewGroups = useMemo(() => {
+    if (!isAllView) return null;
+    
+    const groups: Record<string, Task[]> = {
+      '已过期': [],
+      '今天': [],
+      '更远': [],
+      '无日期': [],
+      '已完成': []
+    };
+
+    // 只对根任务进行分组，子任务通过 TaskTreeItem 递归显示
+    const rootTasks = localTasks.filter(t => !t.parent_id);
+    
+    rootTasks.forEach(task => {
+      const groupName = getTaskGroup(task);
+      groups[groupName].push(task);
+    });
+
+    return groups;
+  }, [localTasks, isAllView]);
   const hideInput = isTrashView || isCompletedView;
 
   // 辅助函数：根据优先级获取颜色已选属性是否存在的标记
@@ -672,35 +712,64 @@ export default function TaskList() {
           onDragEnd={handleDragEnd}
           modifiers={[restrictToVerticalAxis]}
         >
-          {/* 未完成任务区域 - 仅该区域支持拖拽排序 */}
-          <SortableContext items={incompleteTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-            <div>
-              {incompleteTasks.map((task) => (
-                (isTrashView || isCompletedView) ? (
-                  <TaskItem key={task.id} task={task} />
-                ) : (
-                  <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
+          {isAllView && allViewGroups ? (
+            /* “所有任务”分组视图 */
+            <div className="pb-10">
+              {(Object.entries(allViewGroups) as [string, Task[]][]).map(([groupName, tasks]) => (
+                tasks.length > 0 && (
+                  <div key={groupName} className="mb-6">
+                    <div className="px-4 py-2 text-[12px] font-bold text-gray-400 flex items-center gap-2">
+                      <span className={
+                        groupName === '已过期' ? 'text-red-500' : 
+                        groupName === '今天' ? 'text-blue-500' : 
+                        'text-gray-400'
+                      }>
+                        {groupName}
+                      </span>
+                      <span className="font-normal text-[11px]">({tasks.length})</span>
+                    </div>
+                    <div>
+                      {tasks.map((task: Task) => (
+                        <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
+                      ))}
+                    </div>
+                  </div>
                 )
               ))}
             </div>
-          </SortableContext>
+          ) : (
+            <>
+              {/* 常规视图：未完成任务区域 - 仅该区域支持拖拽排序 */}
+              <SortableContext items={incompleteTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                <div>
+                  {incompleteTasks.map((task) => (
+                    (isTrashView || isCompletedView) ? (
+                      <TaskItem key={task.id} task={task} />
+                    ) : (
+                      <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
+                    )
+                  ))}
+                </div>
+              </SortableContext>
 
-          {/* 已完成任务区域 - 不参与拖拽排序上下文 */}
-          {completedTasks.length > 0 && (
-            <div className="mt-8">
-              <div className="px-4 py-2 text-[12px] font-bold text-gray-400">
-                已完成 ({completedTasks.length})
-              </div>
-              <div>
-                {completedTasks.map((task) => (
-                  (isTrashView || isCompletedView) ? (
-                    <TaskItem key={task.id} task={task} />
-                  ) : (
-                    <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
-                  )
-                ))}
-              </div>
-            </div>
+              {/* 常规视图：已完成任务区域 - 不参与拖拽排序上下文 */}
+              {completedTasks.length > 0 && (
+                <div className="mt-8">
+                  <div className="px-4 py-2 text-[12px] font-bold text-gray-400">
+                    已完成 ({completedTasks.length})
+                  </div>
+                  <div>
+                    {completedTasks.map((task) => (
+                      (isTrashView || isCompletedView) ? (
+                        <TaskItem key={task.id} task={task} />
+                      ) : (
+                        <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </DndContext>
 
