@@ -253,12 +253,12 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
             onClick={handleToggle}
             className={`dida-checkbox ${getPriorityClass(task.priority)} ${task.completed ? 'completed' : ''}`}
             style={{
-              // 边框颜色和优先级颜色保持一致
-              borderColor: getPriorityColorVar(task.priority),
-              // 未完成时用浅色背景，完成后用实色背景
-              backgroundColor: task.completed
-                ? getPriorityColorVar(task.priority)
-                : 'color-mix(in srgb, ' + getPriorityColorVar(task.priority) + ' 18%, #ffffff 82%)',
+              // 仅在未完成时设置边框颜色
+              borderColor: !task.completed ? getPriorityColorVar(task.priority) : undefined,
+              // 未完成时使用极浅的背景（几乎透明），已完成时在 CSS 中统一处理为灰色
+              backgroundColor: !task.completed 
+                ? 'color-mix(in srgb, ' + getPriorityColorVar(task.priority) + ' 5%, transparent)' 
+                : undefined,
             }}
           />
         </div>

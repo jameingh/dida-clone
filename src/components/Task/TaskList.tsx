@@ -290,6 +290,7 @@ export default function TaskList() {
   const isCompletedView = selectedListId === 'smart_completed';
   const isAllView = selectedListId === 'smart_all';
   const isTodayView = selectedListId === 'smart_today';
+  const isWeekView = selectedListId === 'smart_week';
 
   // 辅助函数：判断日期分组
   const getTaskGroup = (task: Task) => {
@@ -373,6 +374,67 @@ export default function TaskList() {
 
     return groups;
   }, [localTasks, isTodayView]);
+
+  // “最近7天”视图下的分组逻辑
+  const weekViewGroups = useMemo(() => {
+    if (!isWeekView) return null;
+    
+    const groups: Record<string, Task[]> = {};
+    const rootTasks = localTasks.filter(t => !t.parent_id);
+
+    rootTasks.forEach(task => {
+      let groupName = '';
+      if (task.completed) {
+        groupName = '已完成';
+      } else if (!task.due_date) {
+        groupName = '无日期';
+      } else {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const taskDate = new Date(task.due_date * 1000);
+        taskDate.setHours(0, 0, 0, 0);
+        
+        const diffDays = Math.round((taskDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 0) {
+          groupName = '已过期';
+        } else if (diffDays === 0) {
+          groupName = '今天';
+        } else if (diffDays === 1) {
+          groupName = '明天';
+        } else {
+          const weekday = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][taskDate.getDay()];
+          groupName = `${taskDate.getMonth() + 1}月${taskDate.getDate()}日 ${weekday}`;
+        }
+      }
+      
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(task);
+    });
+
+    // 排序分组
+    const sortedGroupNames = Object.keys(groups).sort((a, b) => {
+      if (a === '已过期') return -1;
+      if (b === '已过期') return 1;
+      if (a === '今天') return -1;
+      if (b === '今天') return 1;
+      if (a === '明天') return -1;
+      if (b === '明天') return 1;
+      if (a === '已完成') return 1;
+      if (b === '已完成') return -1;
+      
+      const dateA = groups[a][0].due_date || 0;
+      const dateB = groups[b][0].due_date || 0;
+      return dateA - dateB;
+    });
+
+    const sortedGroups: Record<string, Task[]> = {};
+    sortedGroupNames.forEach(name => {
+      sortedGroups[name] = groups[name];
+    });
+
+    return sortedGroups;
+  }, [localTasks, isWeekView]);
   const hideInput = isTrashView || isCompletedView;
 
   // 辅助函数：根据优先级获取颜色已选属性是否存在的标记
@@ -761,6 +823,25 @@ export default function TaskList() {
             /* “今天”分组视图 */
             <div className="pb-10">
               {(Object.entries(todayViewGroups) as [string, Task[]][]).map(([groupName, tasks]) => (
+                tasks.length > 0 && (
+                  <div key={groupName} className="mb-6">
+                    <div className="px-4 py-2 text-[13px] font-bold text-gray-900 flex items-center gap-2">
+                      <span>{groupName}</span>
+                      <span className="font-normal text-[11px] text-gray-400">({tasks.length})</span>
+                    </div>
+                    <div>
+                       {tasks.map((task: Task) => (
+                         <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
+                       ))}
+                     </div>
+                   </div>
+                 )
+               ))}
+             </div>
+          ) : isWeekView && weekViewGroups ? (
+            /* “最近7天”分组视图 */
+            <div className="pb-10">
+              {(Object.entries(weekViewGroups) as [string, Task[]][]).map(([groupName, tasks]) => (
                 tasks.length > 0 && (
                   <div key={groupName} className="mb-6">
                     <div className="px-4 py-2 text-[13px] font-bold text-gray-900 flex items-center gap-2">

@@ -46,7 +46,7 @@
 
   /* 自定义 Checkbox 样式 - 模拟滴答清单 */
   .dida-checkbox {
-    @apply w-[18px] h-[18px] rounded-[4px] border-[2px] cursor-pointer transition-all flex items-center justify-center relative;
+    @apply w-[16px] h-[16px] rounded-[3px] border-[1.2px] cursor-pointer transition-all flex items-center justify-center relative;
   }
 
   .dida-checkbox.priority-none {
@@ -69,14 +69,15 @@
     @apply scale-105;
   }
 
-  /* 适配 TW4 的透明度或直接使用颜色 */
+  /* 已完成状态样式 */
   .dida-checkbox.completed {
-    opacity: 0.6;
+    border-color: #D1D1D1 !important;
+    background-color: #D1D1D1 !important;
   }
 
   .dida-checkbox.completed::after {
     content: '';
-    @apply w-[10px] h-[6px] border-b-[2px] border-l-[2px] border-white -rotate-45 mt-[-2px];
+    @apply w-[8px] h-[5px] border-b-[1.5px] border-l-[1.5px] border-white -rotate-45 mt-[-1px];
   }
 }
 
