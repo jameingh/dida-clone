@@ -373,7 +373,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
       {showDatePicker && datePickerPos && (
         <div 
           ref={datePickerRef}
-          className="fixed z-[1000] shadow-2xl animate-in zoom-in-95 duration-75"
+          className="fixed z-[2000] shadow-2xl animate-in zoom-in-95 duration-75"
           style={{ 
             top: datePickerPos.top !== undefined ? `${datePickerPos.top}px` : 'auto',
             bottom: datePickerPos.bottom !== undefined ? `${datePickerPos.bottom}px` : 'auto',

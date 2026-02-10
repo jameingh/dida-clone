@@ -376,7 +376,7 @@ export default function TaskList() {
 
       {/* 顶部快速添加栏 - 垃圾桶和已完成视图下隐藏 */}
       {!hideInput && (
-        <div className={`px-4 py-3 shrink-0 relative ${showDatePicker || showMoreMenu ? 'z-[100]' : 'z-10'}`}>
+        <div className={`px-4 py-3 shrink-0 relative ${showDatePicker || showMoreMenu ? 'z-[200]' : 'z-10'}`}>
           <form 
             onSubmit={handleAddTask} 
             className="relative"

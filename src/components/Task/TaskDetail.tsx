@@ -520,7 +520,7 @@ const handleDescriptionBlur = () => {
               })()}
             </button>
             {isDatePickerOpen && (
-              <div ref={datePickerRef} className="absolute top-full left-0 mt-1 z-50">
+              <div ref={datePickerRef} className="absolute top-full left-0 mt-1 z-[1000]">
                 <DatePicker
                   selectedDate={task.due_date || undefined}
                   reminder={task.reminder || 'none'}
@@ -547,7 +547,7 @@ const handleDescriptionBlur = () => {
             {isPriorityPopoverOpen && (
               <div
                 ref={priorityPopoverRef}
-                className="absolute top-full right-0 mt-1 w-32 bg-white border border-gray-100 shadow-xl rounded-lg p-1 z-50"
+                className="absolute top-full right-0 mt-1 w-32 bg-white border border-gray-100 shadow-xl rounded-lg p-1 z-[1000]"
               >
                 {[Priority.High, Priority.Medium, Priority.Low, Priority.None].map((p) => (
                   <div
@@ -578,7 +578,7 @@ const handleDescriptionBlur = () => {
             {isMoreMenuOpen && (
               <div
                 ref={moreMenuRef}
-                className="absolute top-full right-0 mt-1 w-56 bg-white border border-gray-100 shadow-xl rounded-xl py-1.5 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                className="absolute top-full right-0 mt-1 w-56 bg-white border border-gray-100 shadow-xl rounded-xl py-1.5 z-[1000] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
               >
                 <div className="px-1.5 space-y-0.5">
                   <button type="button" className="w-full flex items-center gap-3 px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
