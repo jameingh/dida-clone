@@ -2,7 +2,7 @@ import { useTask, useSubtasks, useCreateSubtaskSimple, useUpdateTaskOrders, useU
 import { useTags, useCreateTag } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Minus, Paperclip, Workflow, Link2, Search } from 'lucide-react';
+import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Minus, Paperclip, Workflow, Link2, Search, RefreshCw } from 'lucide-react';
 import { Priority, Task } from '../../types';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import SubtaskItem from './SubtaskItem';
@@ -511,6 +511,9 @@ const handleDescriptionBlur = () => {
                     <span className={`text-[13px] font-medium ${textColor}`}>
                       {task.due_date ? formatTaskDateTime(task.due_date) : '日期'}
                     </span>
+                    {task.repeat_rule && (
+                      <RefreshCw className={`w-3 h-3 ml-0.5 ${iconColor}`} />
+                    )}
                   </>
                 );
               })()}

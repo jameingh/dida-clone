@@ -4,7 +4,7 @@ import { useToggleTask, useUpdateTask, useDeleteTask, useUndoDeleteTask, useDele
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
-import { GripVertical, MoreHorizontal, RotateCcw, XCircle, Bell } from 'lucide-react';
+import { GripVertical, MoreHorizontal, RotateCcw, XCircle, Bell, RefreshCw } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import TaskContextMenu from './TaskContextMenu';
@@ -292,7 +292,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
         )}
 
         {/* 任务日期和提醒 */}
-        {(task.due_date || (task.reminder && task.reminder !== 'none')) && (
+        {(task.due_date || (task.reminder && task.reminder !== 'none') || task.repeat_rule) && (
           <div 
             ref={dateTriggerRef}
             onClick={handleDateClick}
@@ -301,6 +301,11 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
             !task.completed && isOverdue(task.due_date) ? 'text-[var(--priority-high)]' : 'text-[var(--dida-text-secondary)]'
           }`}
           >
+            {task.repeat_rule && (
+              <RefreshCw className={`w-3 h-3 ${
+                  !task.completed && isOverdue(task.due_date) ? 'text-[var(--priority-high)]' : 'text-[var(--dida-text-tertiary)]'
+                }`} />
+            )}
             {task.reminder && task.reminder !== 'none' && (
               <Bell className={`w-3 h-3 ${
                   !task.completed && isOverdue(task.due_date) ? 'text-[var(--priority-high)]' : 'text-[var(--dida-text-secondary)]'
