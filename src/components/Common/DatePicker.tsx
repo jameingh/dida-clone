@@ -24,7 +24,7 @@ import {
     RefreshCw,
     Circle,
     Check,
-    XCircle
+    X
 } from 'lucide-react';
 
 interface DatePickerProps {
@@ -48,7 +48,6 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
         selectedDate ? new Date(selectedDate * 1000) : new Date()
     );
     const [activeTab, setActiveTab] = useState<'date' | 'range'>('date');
-    const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
     const [isTimeSet, setIsTimeSet] = useState(!!selectedDate);
     const [showTimeList, setShowTimeList] = useState(false);
     const [showReminderList, setShowReminderList] = useState(false);
@@ -146,8 +145,6 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
         if (val.length > 2) val = val.slice(-2);
         const num = parseInt(val);
         
-        setShowTimeList(false); // 输入时隐藏列表
-
         if (val.length === 2) {
             const hour = Math.min(Math.max(num, 0), 23);
             setSelectedTime(prev => ({ ...prev, hour }));
@@ -166,8 +163,6 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
         if (val.length > 2) val = val.slice(-2);
         const num = parseInt(val);
 
-        setShowTimeList(false); // 输入时隐藏列表
-
         if (val.length === 2) {
             const minute = Math.min(Math.max(num, 0), 59);
             setSelectedTime(prev => ({ ...prev, minute }));
@@ -178,17 +173,6 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
             // 允许输入 1 位数
             setSelectedTime(prev => ({ ...prev, minute: num || 0 }));
             setIsTimeSet(true);
-        }
-    };
-
-    const toggleTimeSet = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (isTimeSet) {
-            setIsTimeSet(false);
-            setShowTimeList(false);
-        } else {
-            setIsTimeSet(true);
-            setShowTimeList(true);
         }
     };
 
@@ -356,41 +340,46 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
                                 setShowTimeList(!showTimeList);
                             }
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors ${isTimeSet ? 'text-[#1890FF]' : 'text-gray-600'}`}
+                        className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors text-gray-600"
                     >
                         <div className="flex items-center gap-3">
                             <Clock className={`w-4 h-4 ${isTimeSet ? 'text-[#1890FF]' : 'text-gray-400 group-hover:text-gray-600'}`} />
                             {isTimeSet ? (
-                                <div className="flex items-center bg-blue-50 px-2 py-0.5 rounded border border-blue-100" onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                }}>
+                                <div 
+                                    className="flex items-center text-[#1890FF]" 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowTimeList(true);
+                                    }}
+                                >
                                     <input
                                         ref={hourInputRef}
                                         type="text"
                                         value={selectedTime.hour.toString().padStart(2, '0')}
                                         onChange={handleHourChange}
+                                        onFocus={() => setShowTimeList(true)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
                                                 e.stopPropagation();
                                             }
                                         }}
-                                        className="w-5 bg-transparent text-[13px] font-medium text-center outline-none"
+                                        className="w-5 bg-transparent text-[13px] font-bold text-center outline-none"
                                     />
-                                    <span className="mx-0.5 text-[13px]">:</span>
+                                    <span className="mx-0.5 text-[13px] font-bold">:</span>
                                     <input
                                         ref={minuteInputRef}
                                         type="text"
                                         value={selectedTime.minute.toString().padStart(2, '0')}
                                         onChange={handleMinuteChange}
+                                        onFocus={() => setShowTimeList(true)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
                                                 e.stopPropagation();
                                             }
                                         }}
-                                        className="w-5 bg-transparent text-[13px] font-medium text-center outline-none"
+                                        className="w-5 bg-transparent text-[13px] font-bold text-center outline-none"
                                     />
                                 </div>
                             ) : (
@@ -399,7 +388,7 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
                         </div>
                         <div className="flex items-center gap-1">
                             {isTimeSet ? (
-                                <XCircle 
+                                <X 
                                     className="w-4 h-4 text-gray-300 hover:text-gray-500 cursor-pointer" 
                                     onClick={(e: React.MouseEvent) => {
                                         e.stopPropagation();
@@ -451,17 +440,28 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
                             setShowReminderList(!showReminderList);
                             setShowTimeList(false);
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors ${selectedReminder !== 'none' ? 'text-[#1890FF]' : 'text-gray-600'}`}
+                        className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors text-gray-600"
                     >
                         <div className="flex items-center gap-3">
                             <Bell className={`w-4 h-4 ${selectedReminder !== 'none' ? 'text-[#1890FF]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                            <span className="text-[13px]">提醒</span>
+                            <span className={`text-[13px] ${selectedReminder !== 'none' ? 'text-[#1890FF] font-medium' : ''}`}>
+                                {reminderOptions.find(o => o.value === selectedReminder)?.label || '提醒'}
+                            </span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <span className={`text-[13px] ${selectedReminder !== 'none' ? 'text-[#1890FF]' : 'text-gray-400'}`}>
-                                {reminderOptions.find(o => o.value === selectedReminder)?.label || '无'}
-                            </span>
-                            <ChevronRight className="w-4 h-4 text-gray-300" />
+                            {selectedReminder !== 'none' ? (
+                                <X 
+                                    className="w-4 h-4 text-gray-300 hover:text-gray-500 cursor-pointer"
+                                    onClick={(e: React.MouseEvent) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        setSelectedReminder('none');
+                                        setShowReminderList(false);
+                                    }}
+                                />
+                            ) : (
+                                <ChevronRight className="w-4 h-4 text-gray-300" />
+                            )}
                         </div>
                     </button>
 
@@ -496,12 +496,12 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
                 </div>
 
                 {/* 重复行 */}
-                <button 
+                <button
                     type="button"
                     onClick={(e) => e.preventDefault()}
-                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors text-gray-600"
                 >
-                    <div className="flex items-center gap-3 text-gray-600 group-hover:text-gray-900">
+                    <div className="flex items-center gap-3">
                         <RefreshCw className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                         <span className="text-[13px]">重复</span>
                     </div>

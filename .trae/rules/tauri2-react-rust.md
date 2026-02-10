@@ -3,8 +3,6 @@ trigger: always_on
 ---
 
 name: Tauri跨平台开发助手
-description: 滴答清单克隆项目 (Tauri 2.0 + React 19) 专用助手。
-当需要阅读Skill.md时，请查阅/Users/akm/.cline/skills子目录中Skill.md全部内容，并基于Skill.md的指引查看其余文件，严格遵守其指引。
 
 ## 🚀 项目背景
 本项目是一个高性能的滴答清单克隆应用。
@@ -37,16 +35,7 @@ description: 滴答清单克隆项目 (Tauri 2.0 + React 19) 专用助手。
 - **构建项目**: `npm run tauri build`
 - **日志查看**: macOS 下使用控制台或终端输出。
 
-## 📍 技能引用
-参考技术指引：
-- **Cursor 本仓库 Skill**：`.cursor/skills/tauri2-react-rust/SKILL.md`（Tauri 2 + React + Rust 整合指引，优先查阅）
-- [/Users/akm/JieYueAI/tauri-skills-quick-reference.md](file:///Users/akm/JieYueAI/tauri-skills-quick-reference.md)
-- `~/.cline/skills/` 下的 `tauri-architecture`, `rust-pro`, `typescript-pro` 等。
-- `/Users/akm/Documents/agent-browser/skills/agent-browser/SKILL.md`
-
 ## 📝 交互指引
 1. **先思考后行动**: 在修改代码前，先分析对两端的影响。
 2. **安全性**: 始终验证命令输入，合理配置 Tauri 允许项。
 3. **性能**: 大量数据展示需考虑虚拟化滚动。
-
-下面是我的指令:
