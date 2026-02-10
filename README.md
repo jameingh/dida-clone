@@ -1,13 +1,21 @@
 # 滴答清单克隆 (TickTick Clone)
-
 一个使用 Tauri + React + TypeScript 开发的跨平台任务管理应用，模仿滴答清单的核心功能。
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Tauri](https://img.shields.io/badge/Tauri-2.10-blue)
-![React](https://img.shields.io/badge/React-18-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+> [!IMPORTANT]
+> **声明**：本项目仅供**自用和学习**交流使用，**严禁用于任何商业用途**。
+
+## 🛡️ 数据与隐私
+
+- **完全本地化**：当前版本所有任务数据均存储在您本地的 SQLite 数据库中，不会上传到任何服务器，确保您的隐私安全。
+- **未来规划**：后续版本将计划引入**云端存储与同步**功能，届时将提供数据迁移方案。
 
 ## 界面预览
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Tauri](https://img.shields.io/badge/Tauri-2.0-blue)
+![React](https://img.shields.io/badge/React-19-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+
 ![界面预览](image.png)
 
 ## ✨ 特性
@@ -22,22 +30,23 @@
 ## 🎯 核心功能
 
 ### 已实现
-- ✅ 任务管理（创建、查看、完成、删除）
-- ✅ 智能清单（收集箱、今天、最近7天、所有任务、已完成）
-- ✅ 自定义清单
-- ✅ 任务优先级
-- ✅ 截止日期
-- ✅ 任务标签
-- ✅ 任务详情面板
-- ✅ 三栏布局界面
+- ✅ 任务管理（创建、查看、编辑、完成、删除）
+- ✅ 智能清单（所有任务、今天、最近7天、收集箱、已完成、垃圾桶）
+- ✅ 任务分组（按过期、今天、更远、无日期、已完成自动分组）
+- ✅ 子任务支持（多级嵌套、递归展示）
+- ✅ 任务提醒（支持单次提醒设置）
+- ✅ 重复任务（支持按天、周、月、年等周期性设置）
+- ✅ 快捷键支持（全局与局部快捷键优化）
+- ✅ 自定义清单与标签管理
+- ✅ 任务优先级与截止日期
+- ✅ 响应式三栏布局（侧边栏可折叠、面板宽度可拉伸）
 
 ### 计划中
-- 🔄 子任务支持
-- 🔄 任务搜索和过滤
-- 🔄 快捷键支持
-- 🔄 任务提醒
-- 🔄 重复任务
-- 🔄 深色模式
+- 🔄 任务搜索和高级过滤
+- 🔄 深色模式支持
+- 🔄 数据导入与导出
+- 🔄 云端存储与多端同步功能
+- 🔄 性能优化（大数据量虚拟滚动）
 
 ## 🛠️ 技术栈
 
@@ -48,7 +57,7 @@
 - **Tokio** - 异步运行时
 
 ### 前端
-- **React 18** - UI 框架
+- **React 19** - UI 框架
 - **TypeScript 5** - 类型安全
 - **Tailwind CSS 4** - 样式框架
 - **React Query** - 数据状态管理
