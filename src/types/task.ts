@@ -5,6 +5,25 @@ export enum Priority {
   High = 3,
 }
 
+export enum RepeatType {
+  None = 'none',
+  Daily = 'daily',
+  Weekly = 'weekly',
+  Monthly = 'monthly',
+  Yearly = 'yearly',
+  Weekday = 'weekday',
+  Custom = 'custom',
+}
+
+export interface RepeatRule {
+  type: RepeatType;
+  interval?: number;
+  daysOfWeek?: number[];
+  dayOfMonth?: number;
+  monthOfYear?: number;
+  endDate?: number;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -14,6 +33,7 @@ export interface Task {
   priority: Priority;
   due_date: number | null;
   reminder: string | null;
+  repeat_rule: RepeatRule | null;
   tags: string[];
   parent_id: string | null;
   order: number;
@@ -30,6 +50,7 @@ export interface CreateTaskInput {
   priority?: Priority;
   due_date?: number;
   reminder?: string;
+  repeat_rule?: RepeatRule;
   tags?: string[];
   parent_id?: string;
 }

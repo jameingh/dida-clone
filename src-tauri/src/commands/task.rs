@@ -26,6 +26,7 @@ pub async fn create_task_extended(
     list_id: String,
     due_date: Option<i64>,
     reminder: Option<String>,
+    repeat_rule: Option<crate::models::RepeatRule>,
     priority: Option<i32>,
     tags: Vec<String>,
     description: Option<String>,
@@ -34,6 +35,7 @@ pub async fn create_task_extended(
     let mut task = Task::new(title, list_id);
     task.due_date = due_date;
     task.reminder = reminder;
+    task.repeat_rule = repeat_rule;
     if let Some(p) = priority {
         task.priority = crate::models::Priority::from_i32(p);
     }

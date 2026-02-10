@@ -9,10 +9,12 @@ impl TaskRepository {
     pub fn create(db: &Database, task: &Task) -> Result<Task> {
         let conn = db.conn.lock().unwrap();
         
+        let repeat_rule_json = task.repeat_rule.as_ref().map(|r| serde_json::to_string(r).unwrap());
+
         conn.execute(
             "INSERT INTO tasks (id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+             due_date, reminder, repeat_rule, parent_id, order_num, is_deleted, created_at, updated_at, completed_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             params![
                 task.id,
                 task.title,
@@ -22,6 +24,7 @@ impl TaskRepository {
                 task.priority.to_i32(),
                 task.due_date,
                 task.reminder,
+                repeat_rule_json,
                 task.parent_id,
                 task.order,
                 task.is_deleted as i32,
@@ -49,7 +52,7 @@ impl TaskRepository {
         
         let mut stmt = conn.prepare(
             "SELECT id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+             due_date, reminder, repeat_rule, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
              FROM tasks WHERE id = ?1"
         )?;
 
@@ -65,7 +68,7 @@ impl TaskRepository {
         
         let mut stmt = conn.prepare(
             "SELECT id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+             due_date, reminder, repeat_rule, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
              FROM tasks WHERE is_deleted = 0 ORDER BY order_num ASC, created_at DESC"
         )?;
 
@@ -88,36 +91,37 @@ impl TaskRepository {
         let (query, has_params) = match list_id {
             "smart_trash" => (
                 "SELECT id, title, description, list_id, completed, priority, 
-                 due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                 due_date, reminder, repeat_rule, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
                  FROM tasks WHERE is_deleted = 1 ORDER BY updated_at DESC",
                 false
             ),
             "smart_completed" => (
                 "SELECT id, title, description, list_id, completed, priority, 
-                 due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                 due_date, reminder, repeat_rule, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
                  FROM tasks WHERE completed = 1 AND is_deleted = 0 ORDER BY completed_at DESC, updated_at DESC",
                 false
             ),
             "smart_all" => (
                 "SELECT id, title, description, list_id, completed, priority, 
-                 due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                 due_date, reminder, repeat_rule, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
                  FROM tasks WHERE is_deleted = 0 ORDER BY order_num ASC, created_at DESC",
                 false
             ),
             "smart_today" => {
-                let now = chrono::Local::now();
-                let today_start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_local_timezone(chrono::Local).unwrap().timestamp();
-                let today_end = now.date_naive().and_hms_opt(23, 59, 59).unwrap().and_local_timezone(chrono::Local).unwrap().timestamp();
+                let now = chrono::Utc::now();
+                let today_end = now.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc().timestamp();
+                let today_start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
                 
-                let mut stmt = conn.prepare(
-                    "SELECT id, title, description, list_id, completed, priority, 
-                     due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
-                     FROM tasks 
-                     WHERE (due_date <= ?1 AND is_deleted = 0 AND completed = 0)
-                        OR (completed_at >= ?2 AND completed_at <= ?1 AND is_deleted = 0 AND completed = 1)
-                     ORDER BY completed ASC, due_date ASC, priority DESC"
-                )?;
+                let query = "SELECT id, title, description, list_id, completed, priority, 
+                             due_date, reminder, repeat_rule, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                             FROM tasks 
+                             WHERE is_deleted = 0 AND (
+                                (completed = 0 AND due_date <= ?1) OR 
+                                (completed = 1 AND completed_at >= ?2 AND completed_at <= ?1)
+                             )
+                             ORDER BY completed ASC, due_date ASC, created_at DESC";
                 
+                let mut stmt = conn.prepare(query)?;
                 let tasks = stmt.query_map(params![today_end, today_start], Self::map_row)?
                     .collect::<rusqlite::Result<Vec<Task>>>()?;
                 
@@ -129,19 +133,20 @@ impl TaskRepository {
                 return Ok(tasks_with_tags);
             },
             "smart_week" => {
-                let now = chrono::Local::now();
-                let today_start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_local_timezone(chrono::Local).unwrap().timestamp();
-                let week_end = (now + chrono::Duration::days(7)).date_naive().and_hms_opt(23, 59, 59).unwrap().and_local_timezone(chrono::Local).unwrap().timestamp();
+                let now = chrono::Utc::now();
+                let week_end = (now + chrono::Duration::days(7)).date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc().timestamp();
+                let today_start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
+
+                let query = "SELECT id, title, description, list_id, completed, priority, 
+                             due_date, reminder, repeat_rule, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+                             FROM tasks 
+                             WHERE is_deleted = 0 AND (
+                                (completed = 0 AND due_date <= ?1) OR 
+                                (completed = 1 AND completed_at >= ?2 AND completed_at <= ?1)
+                             )
+                             ORDER BY completed ASC, due_date ASC, created_at DESC";
                 
-                let mut stmt = conn.prepare(
-                    "SELECT id, title, description, list_id, completed, priority, 
-                     due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
-                     FROM tasks 
-                     WHERE (due_date <= ?1 AND is_deleted = 0 AND completed = 0)
-                        OR (completed_at >= ?2 AND completed_at <= ?1 AND is_deleted = 0 AND completed = 1)
-                     ORDER BY completed ASC, due_date ASC, priority DESC"
-                )?;
-                
+                let mut stmt = conn.prepare(query)?;
                 let tasks = stmt.query_map(params![week_end, today_start], Self::map_row)?
                     .collect::<rusqlite::Result<Vec<Task>>>()?;
                 
@@ -184,7 +189,7 @@ impl TaskRepository {
         
         let mut stmt = conn.prepare(
             "SELECT t.id, t.title, t.description, t.list_id, t.completed, t.priority, 
-             t.due_date, t.reminder, t.parent_id, t.order_num, t.is_deleted, t.created_at, t.updated_at, t.completed_at
+             t.due_date, t.reminder, t.repeat_rule, t.parent_id, t.order_num, t.is_deleted, t.created_at, t.updated_at, t.completed_at
              FROM tasks t
              INNER JOIN task_tags tt ON t.id = tt.task_id
              WHERE tt.tag_id = ?1 AND t.is_deleted = 0
@@ -208,7 +213,7 @@ impl TaskRepository {
         
         let mut stmt = conn.prepare(
             "SELECT id, title, description, list_id, completed, priority, 
-             due_date, reminder, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
+             due_date, reminder, repeat_rule, parent_id, order_num, is_deleted, created_at, updated_at, completed_at
              FROM tasks WHERE parent_id = ?1 AND is_deleted = 0 ORDER BY order_num ASC, created_at DESC"
         )?;
 
@@ -227,10 +232,12 @@ impl TaskRepository {
     pub fn update(db: &Database, task: &Task) -> Result<Task> {
         let conn = db.conn.lock().unwrap();
         
+        let repeat_rule_json = task.repeat_rule.as_ref().map(|r| serde_json::to_string(r).unwrap());
+
         conn.execute(
             "UPDATE tasks SET title = ?1, description = ?2, list_id = ?3, completed = ?4, 
-             priority = ?5, due_date = ?6, reminder = ?7, parent_id = ?8, order_num = ?9, 
-             is_deleted = ?10, updated_at = ?11, completed_at = ?12 WHERE id = ?13",
+             priority = ?5, due_date = ?6, reminder = ?7, repeat_rule = ?8, parent_id = ?9, order_num = ?10, 
+             is_deleted = ?11, updated_at = ?12, completed_at = ?13 WHERE id = ?14",
             params![
                 task.title,
                 task.description,
@@ -239,6 +246,7 @@ impl TaskRepository {
                 task.priority.to_i32(),
                 task.due_date,
                 task.reminder,
+                repeat_rule_json,
                 task.parent_id,
                 task.order,
                 task.is_deleted as i32,
@@ -341,6 +349,9 @@ impl TaskRepository {
     }
 
     fn map_row(row: &rusqlite::Row) -> rusqlite::Result<Task> {
+        let repeat_rule_json: Option<String> = row.get(8)?;
+        let repeat_rule = repeat_rule_json.and_then(|json| serde_json::from_str(&json).ok());
+
         Ok(Task {
             id: row.get(0)?,
             title: row.get(1)?,
@@ -350,12 +361,13 @@ impl TaskRepository {
             priority: Priority::from_i32(row.get::<_, i32>(5)?),
             due_date: row.get(6)?,
             reminder: row.get(7)?,
-            parent_id: row.get(8)?,
-            order: row.get(9)?,
-            is_deleted: row.get::<_, i32>(10)? != 0,
-            created_at: row.get(11)?,
-            updated_at: row.get(12)?,
-            completed_at: row.get(13)?,
+            repeat_rule,
+            parent_id: row.get(9)?,
+            order: row.get(10)?,
+            is_deleted: row.get::<_, i32>(11)? != 0,
+            created_at: row.get(12)?,
+            updated_at: row.get(13)?,
+            completed_at: row.get(14)?,
             tags: Vec::new(),
         })
     }

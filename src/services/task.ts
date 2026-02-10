@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Task, Priority } from '../types';
+import { Task, Priority, RepeatRule } from '../types';
 
 // 简单判断是否运行在 Tauri 环境
 const isTauriEnv = () =>
@@ -37,6 +37,7 @@ function createBrowserTaskBase(partial: Partial<Task> & Pick<Task, 'title' | 'li
     priority: partial.priority ?? Priority.None,
     due_date: partial.due_date ?? null,
     reminder: partial.reminder ?? null,
+    repeat_rule: partial.repeat_rule ?? null,
     tags: partial.tags ?? [],
     parent_id: partial.parent_id ?? null,
     order: partial.order ?? 0,
@@ -153,6 +154,7 @@ const browserTaskStore = {
     listId: string,
     dueDate?: number,
     reminder?: string,
+    repeat_rule?: RepeatRule,
     priority?: number,
     tags?: string[],
     description?: string
@@ -163,6 +165,7 @@ const browserTaskStore = {
       list_id: listId,
       due_date: dueDate ?? null,
       reminder: reminder ?? null,
+      repeat_rule: repeat_rule ?? null,
       priority: (priority ?? 0) as Priority,
       tags: tags ?? [],
       description: description ?? '',
@@ -300,12 +303,13 @@ export const taskService = {
     listId: string,
     dueDate?: number,
     reminder?: string,
+    repeat_rule?: RepeatRule,
     priority?: number,
     tags?: string[],
     description?: string
   ): Promise<Task> {
     if (!isTauriEnv()) {
-      return browserTaskStore.createTaskExtended(title, listId, dueDate, reminder, priority, tags, description);
+      return browserTaskStore.createTaskExtended(title, listId, dueDate, reminder, repeat_rule, priority, tags, description);
     }
 
     const params = {
@@ -313,6 +317,7 @@ export const taskService = {
       listId,  // 使用 camelCase，Tauri 2.0 会自动映射到 Rust 的 snake_case
       dueDate,
       reminder,
+      repeat_rule,
       priority,
       tags: tags || [],
       description

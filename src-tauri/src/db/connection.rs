@@ -38,6 +38,7 @@ impl Database {
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL,
                 completed_at INTEGER,
+                repeat_rule TEXT,
                 FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE,
                 FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE CASCADE
             )",
@@ -46,6 +47,9 @@ impl Database {
 
         // 确保 is_deleted 列存在 (简单迁移)
         let _ = conn.execute("ALTER TABLE tasks ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0", []);
+
+        // 确保 repeat_rule 列存在
+        let _ = conn.execute("ALTER TABLE tasks ADD COLUMN repeat_rule TEXT", []);
 
         // 创建清单表
         conn.execute(

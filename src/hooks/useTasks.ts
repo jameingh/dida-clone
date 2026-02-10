@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskService } from '../services';
-import { Task } from '../types';
+import { Task, RepeatRule } from '../types';
 
 export function useTasks(listId?: string, tagId?: string) {
   return useQuery({
@@ -54,6 +54,7 @@ export function useCreateTaskExtended() {
       listId,
       dueDate,
       reminder,
+      repeat_rule,
       priority,
       tags,
       description
@@ -62,11 +63,12 @@ export function useCreateTaskExtended() {
       listId: string;
       dueDate?: number;
       reminder?: string;
+      repeat_rule?: RepeatRule;
       priority?: number;
       tags?: string[];
       description?: string;
     }) =>
-      taskService.createTaskExtended(title, listId, dueDate, reminder, priority, tags, description),
+      taskService.createTaskExtended(title, listId, dueDate, reminder, repeat_rule, priority, tags, description),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },

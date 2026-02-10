@@ -10,6 +10,7 @@ pub struct Task {
     pub priority: Priority,
     pub due_date: Option<i64>,
     pub reminder: Option<String>,
+    pub repeat_rule: Option<RepeatRule>,
     pub tags: Vec<String>,
     pub parent_id: Option<String>,
     pub order: i32,
@@ -17,6 +18,30 @@ pub struct Task {
     pub created_at: i64,
     pub updated_at: i64,
     pub completed_at: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RepeatType {
+    None,
+    Daily,
+    Weekly,
+    Monthly,
+    Yearly,
+    Weekday,
+    Custom,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepeatRule {
+    #[serde(rename = "type")]
+    pub repeat_type: RepeatType,
+    pub interval: Option<i32>,
+    pub days_of_week: Option<Vec<i32>>,
+    pub day_of_month: Option<i32>,
+    pub month_of_year: Option<i32>,
+    pub end_date: Option<i64>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -54,6 +79,7 @@ impl Task {
             priority: Priority::None,
             due_date: None,
             reminder: None,
+            repeat_rule: None,
             tags: Vec::new(),
             parent_id: None,
             order: 0,

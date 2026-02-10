@@ -17,7 +17,7 @@ import { Plus, Calendar, ChevronDown, Flag, Hash, X, Check, Trash2, Inbox, Paper
 import { useTasks, useCreateTaskExtended, useUpdateTaskOrders, useEmptyTrash } from '../../hooks/useTasks';
 import { useTags, useCreateTag, useUpdateTag } from '../../hooks/useTags';
 import { useLists } from '../../hooks/useLists';
-import { Task } from '../../types';
+import { Task, Priority, RepeatRule } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
 import TaskItem from './TaskItem';
@@ -54,8 +54,6 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { formatTaskDateTime } from '../../utils/date';
 import { getPriorityLabel, getPriorityTextClass } from '../../utils/priority';
 import { groupTasks, getSortedGroupNames } from '../../utils/taskGrouping';
-import { Priority } from '../../types';
-
 export default function TaskList() {
   const { 
     selectedListId, 
@@ -76,6 +74,7 @@ export default function TaskList() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState<number | undefined>();
   const [newTaskReminder, setNewTaskReminder] = useState<string | undefined>();
+  const [newTaskRepeat, setNewTaskRepeat] = useState<RepeatRule | null>(null);
   const [newTaskPriority, setNewTaskPriority] = useState<number | undefined>();
   const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
 
@@ -202,6 +201,7 @@ export default function TaskList() {
         listId: listId,
         dueDate: newTaskDueDate,
         reminder: newTaskReminder,
+        repeat_rule: newTaskRepeat || undefined,
         priority: newTaskPriority,
         tags: Array.from(tagsToAssign),
         description: undefined,
@@ -209,6 +209,7 @@ export default function TaskList() {
       setNewTaskTitle('');
       setNewTaskDueDate(undefined);
       setNewTaskReminder(undefined);
+      setNewTaskRepeat(null);
       setNewTaskPriority(undefined);
       setNewTaskTags([]);
       setShowDatePicker(false);
@@ -418,9 +419,11 @@ export default function TaskList() {
                         <DatePicker
                           selectedDate={newTaskDueDate}
                           reminder={newTaskReminder}
-                          onSelect={(timestamp, reminder) => {
+                          repeat_rule={newTaskRepeat}
+                          onSelect={(timestamp, reminder, repeat_rule) => {
                             setNewTaskDueDate(timestamp);
                             setNewTaskReminder(reminder);
+                            setNewTaskRepeat(repeat_rule || null);
                             setShowDatePicker(false);
                             setTimeout(() => inputRef.current?.focus(), 0);
                           }}
