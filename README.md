@@ -65,9 +65,25 @@
 - **date-fns** - 日期处理
 - **lucide-react** - 图标库
 
-## 📦 安装
+## 📦 安装与下载
 
-### 前置要求
+### 直接下载
+您可以从 [GitHub Releases](https://github.com/<your-username>/dida-clone/releases) 页面下载最新的 macOS 编译版本（`.dmg` 或 `.app`）。
+
+### 自动构建说明
+本项目配置了 GitHub Actions 自动化构建流程。每当您向仓库推送以 `v` 开头的标签（例如 `v0.1.0`）时，GitHub 会自动触发构建任务并创建一个新的 Release 草稿。
+
+**触发步骤：**
+1. 修改 `package.json` 中的版本号。
+2. 提交代码并推送标签：
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+3. 前往 GitHub 仓库的 **Actions** 标签查看构建进度。
+4. 构建完成后，在 **Releases** 页面发布生成的草稿。
+
+### 本地开发前置要求
 - Node.js 18+
 - Rust 1.70+
 - npm 或 yarn
