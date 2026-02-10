@@ -3,7 +3,7 @@ import { useTags, useCreateTag } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
 import { useAlertStore } from '../../store/useAlertStore';
 import { X, Calendar, Flag, AlignLeft, ListTodo, Plus, Hash, RotateCcw, Trash2, MoreHorizontal, CheckSquare, ChevronRight, Type, MessageSquare, Copy, Printer, Archive, ArrowUpToLine, History, FileText, Play, Save, Link, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Minus, Paperclip, Workflow, Link2, Search, RefreshCw } from 'lucide-react';
-import { Priority, Task } from '../../types';
+import { Priority, Task, RepeatRule } from '../../types';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import SubtaskItem from './SubtaskItem';
 import DatePicker from '../Common/DatePicker';
@@ -388,12 +388,13 @@ const handleDescriptionBlur = () => {
     setIsPriorityPopoverOpen(false);
   };
 
-  const handleDateChange = (timestamp: number | undefined, reminder?: string) => {
+  const handleDateChange = (timestamp: number | undefined, reminder?: string, repeat_rule?: RepeatRule | null) => {
     if (task) {
       updateTask.mutate({
         ...task,
         due_date: timestamp || null,
         reminder: reminder || 'none',
+        repeat_rule: repeat_rule || null,
       });
     }
     setIsDatePickerOpen(false);
@@ -522,6 +523,8 @@ const handleDescriptionBlur = () => {
               <div ref={datePickerRef} className="absolute top-full left-0 mt-1 z-50">
                 <DatePicker
                   selectedDate={task.due_date || undefined}
+                  reminder={task.reminder || 'none'}
+                  repeat_rule={task.repeat_rule}
                   onSelect={handleDateChange}
                 />
               </div>

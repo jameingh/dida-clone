@@ -60,7 +60,31 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, re
     const [showRepeatList, setShowRepeatList] = useState(false);
     const [showCustomRepeat, setShowCustomRepeat] = useState(false);
     const [selectedReminder, setSelectedReminder] = useState(initialReminder || 'none');
+
+    // 同步外部属性到内部状态
+    useEffect(() => {
+        setSelectedReminder(initialReminder || 'none');
+    }, [initialReminder]);
+
+    useEffect(() => {
+        if (selectedDate) {
+            const date = new Date(selectedDate * 1000);
+            setTempSelectedDate(date);
+            setViewDate(date);
+            setIsTimeSet(true);
+            setSelectedTime({ hour: date.getHours(), minute: date.getMinutes() });
+        } else {
+            setTempSelectedDate(new Date());
+            setIsTimeSet(false);
+        }
+    }, [selectedDate]);
+
     const [selectedRepeat, setSelectedRepeat] = useState<RepeatRule>(initialRepeat || { type: RepeatType.None });
+
+    // 当 initialRepeat 改变时（例如点击不同的任务），更新内部状态
+    useEffect(() => {
+        setSelectedRepeat(initialRepeat || { type: RepeatType.None });
+    }, [initialRepeat]);
 
     // 自定义重复设置
     const [customRepeatType, setCustomRepeatType] = useState<RepeatType>(RepeatType.Daily);

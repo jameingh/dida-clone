@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Task, Priority } from '../../types';
+import { Task, Priority, RepeatRule } from '../../types';
 import { useToggleTask, useUpdateTask, useDeleteTask, useUndoDeleteTask, useDeleteTaskPermanently, useCreateSubtaskSimple } from '../../hooks/useTasks';
 import { useTags } from '../../hooks/useTags';
 import { useAppStore } from '../../store/useAppStore';
@@ -188,11 +188,12 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
     }
   };
 
-  const handleDatePickerSelect = (timestamp: number | undefined, reminder?: string) => {
+  const handleDatePickerSelect = (timestamp: number | undefined, reminder?: string, repeat_rule?: RepeatRule | null) => {
     updateTask.mutate({
       ...task,
       due_date: timestamp || null,
       reminder: reminder || 'none',
+      repeat_rule: repeat_rule || null,
     });
     setShowDatePicker(false);
   };
@@ -386,6 +387,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
           <DatePicker 
             selectedDate={task.due_date || undefined}
             reminder={task.reminder || 'none'}
+            repeat_rule={task.repeat_rule}
             onSelect={handleDatePickerSelect}
           />
         </div>
