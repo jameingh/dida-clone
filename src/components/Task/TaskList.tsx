@@ -289,6 +289,7 @@ export default function TaskList() {
   const isTrashView = selectedListId === 'smart_trash';
   const isCompletedView = selectedListId === 'smart_completed';
   const isAllView = selectedListId === 'smart_all';
+  const isTodayView = selectedListId === 'smart_today';
 
   // 辅助函数：判断日期分组
   const getTaskGroup = (task: Task) => {
@@ -347,6 +348,31 @@ export default function TaskList() {
 
     return groups;
   }, [localTasks, isAllView]);
+
+  // “今天”视图下的分组逻辑
+  const todayViewGroups = useMemo(() => {
+    if (!isTodayView) return null;
+    
+    const groups: Record<string, Task[]> = {
+      '已过期': [],
+      '今天': [],
+      '已完成': []
+    };
+
+    // 同样只对根任务分组
+    const rootTasks = localTasks.filter(t => !t.parent_id);
+    
+    rootTasks.forEach(task => {
+      const groupName = getTaskGroup(task);
+      // 如果是在今天视图中，且任务不在预设的三个组内（比如误入了更远或无日期的任务，虽然逻辑上不该出现）
+      // 我们可以将其归入适当的组或忽略，这里我们只处理这三个
+      if (groups[groupName]) {
+        groups[groupName].push(task);
+      }
+    });
+
+    return groups;
+  }, [localTasks, isTodayView]);
   const hideInput = isTrashView || isCompletedView;
 
   // 辅助函数：根据优先级获取颜色已选属性是否存在的标记
@@ -718,15 +744,28 @@ export default function TaskList() {
               {(Object.entries(allViewGroups) as [string, Task[]][]).map(([groupName, tasks]) => (
                 tasks.length > 0 && (
                   <div key={groupName} className="mb-6">
-                    <div className="px-4 py-2 text-[12px] font-bold text-gray-400 flex items-center gap-2">
-                      <span className={
-                        groupName === '已过期' ? 'text-red-500' : 
-                        groupName === '今天' ? 'text-blue-500' : 
-                        'text-gray-400'
-                      }>
-                        {groupName}
-                      </span>
-                      <span className="font-normal text-[11px]">({tasks.length})</span>
+                    <div className="px-4 py-2 text-[13px] font-bold text-gray-900 flex items-center gap-2">
+                      <span>{groupName}</span>
+                      <span className="font-normal text-[11px] text-gray-400">({tasks.length})</span>
+                    </div>
+                    <div>
+                      {tasks.map((task: Task) => (
+                        <TaskTreeItem key={task.id} task={task} allTasks={localTasks} />
+                      ))}
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          ) : isTodayView && todayViewGroups ? (
+            /* “今天”分组视图 */
+            <div className="pb-10">
+              {(Object.entries(todayViewGroups) as [string, Task[]][]).map(([groupName, tasks]) => (
+                tasks.length > 0 && (
+                  <div key={groupName} className="mb-6">
+                    <div className="px-4 py-2 text-[13px] font-bold text-gray-900 flex items-center gap-2">
+                      <span>{groupName}</span>
+                      <span className="font-normal text-[11px] text-gray-400">({tasks.length})</span>
                     </div>
                     <div>
                       {tasks.map((task: Task) => (

@@ -266,7 +266,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
         {/* 任务内容 */}
         <div className="flex-1 min-w-0 px-1">
           <div
-            className={`text-[14px] leading-tight truncate ${task.completed ? 'line-through text-gray-400' : 'text-gray-800 font-medium'
+            className={`text-[14px] leading-tight truncate ${task.completed ? 'line-through text-gray-400' : 'text-gray-800'
               }`}
           >
             {task.title || '无标题任务'}
