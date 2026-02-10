@@ -46,14 +46,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
     if (isResizing) {
       window.addEventListener('mousemove', resize);
       window.addEventListener('mouseup', stopResizing);
-      // 防止拖动时选择文本
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
+      document.body.classList.add('is-resizing');
     } else {
       window.removeEventListener('mousemove', resize);
       window.removeEventListener('mouseup', stopResizing);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+      document.body.classList.remove('is-resizing');
     }
 
     return () => {

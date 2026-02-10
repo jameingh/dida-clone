@@ -40,6 +40,13 @@
   * {
     box-sizing: border-box;
   }
+
+  /* 全局拖拽缩放状态 */
+  .is-resizing, .is-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
 }
 
 @layer components {
