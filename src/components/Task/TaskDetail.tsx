@@ -48,6 +48,12 @@ export default function TaskDetail() {
       setIsResizing(false);
       document.body.style.cursor = 'default';
       document.body.style.userSelect = 'auto';
+      // 移除全局样式防止 Tauri 选中
+      const styleId = 'disable-select-style';
+      const styleElement = document.getElementById(styleId);
+      if (styleElement) {
+        styleElement.remove();
+      }
     };
 
     if (isResizing) {
@@ -55,6 +61,20 @@ export default function TaskDetail() {
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
+
+      // Tauri 环境下，有时候单纯的 userSelect = 'none' 不够，需要注入全局 CSS
+      const styleId = 'disable-select-style';
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `
+          * {
+            -webkit-user-select: none !important;
+            user-select: none !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
     }
 
     return () => {
