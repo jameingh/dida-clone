@@ -357,7 +357,6 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
                                         type="text"
                                         value={selectedTime.hour.toString().padStart(2, '0')}
                                         onChange={handleHourChange}
-                                        onFocus={() => setShowTimeList(true)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
@@ -372,7 +371,6 @@ export default function DatePicker({ selectedDate, reminder: initialReminder, on
                                         type="text"
                                         value={selectedTime.minute.toString().padStart(2, '0')}
                                         onChange={handleMinuteChange}
-                                        onFocus={() => setShowTimeList(true)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
