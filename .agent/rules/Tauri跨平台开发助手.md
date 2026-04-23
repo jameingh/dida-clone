@@ -42,7 +42,7 @@ description: 滴答清单克隆项目 (Tauri 2.0 + React 19) 专用助手。
 - **Cursor 本仓库 Skill**：`.cursor/skills/tauri2-react-rust/SKILL.md`（Tauri 2 + React + Rust 整合指引，优先查阅）
 - [/Users/akm/JieYueAI/tauri-skills-quick-reference.md](file:///Users/akm/JieYueAI/tauri-skills-quick-reference.md)
 - `~/.cline/skills/` 下的 `tauri-architecture`, `rust-pro`, `typescript-pro` 等。
-- `/Users/akm/Documents/agent-browser/skills/agent-browser/SKILL.md`
+- `bb-browser`（用于页面调研、交互回归、截图取证）
 
 ## 📝 交互指引
 1. **先思考后行动**: 在修改代码前，先分析对两端的影响。

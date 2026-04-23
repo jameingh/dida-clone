@@ -1,6 +1,6 @@
 ---
 name: tauri2-react-rust
-description: Guides development of cross-platform desktop apps with Tauri 2, TypeScript, React, and Rust. Use when building Tauri apps, implementing IPC, designing Rust backend or TypeScript/React frontend, when researching or cloning a website (open site, snapshot elements), when verifying local dev or built frontend in browser, or when the user mentions Tauri, Tauri 2, Rust backend, React frontend, desktop app architecture, invoke/commands, cross-platform, 调研网站, 验证效果, agent-browser.
+description: Guides development of cross-platform desktop apps with Tauri 2, TypeScript, React, and Rust. Use when building Tauri apps, implementing IPC, designing Rust backend or TypeScript/React frontend, when researching or cloning a website (open site, snapshot elements), when verifying local dev or built frontend in browser, or when the user mentions Tauri, Tauri 2, Rust backend, React frontend, desktop app architecture, invoke/commands, cross-platform, 调研网站, 验证效果, bb-browser.
 ---
 
 # Tauri 2 + React + Rust 跨平台开发
@@ -125,33 +125,22 @@ npm run tauri build  # 生产构建
 
 - **Rust**：单元测试放在 `commands/`、`db/` 等模块内；集成测试可放在 `src-tauri/tests/`
 - **前端**：使用 `@tauri-apps/api/mocks` 的 `mockIPC` 模拟命令返回值，再测组件与 hooks
-- **调研与验证**：见下一节 agent-browser 流程。
+- **调研与验证**：见下一节 bb-browser 流程。
 
-## 调研与验证：agent-browser
+## 调研与验证：bb-browser
 
-在**调研**和**验证**阶段用浏览器自动化（如 agent-browser）可显著提效：克隆网站时先打开目标站调研元素，开发完成后打开本地站点验证效果。
+在**调研**和**验证**阶段用浏览器自动化（如 bb-browser skill）可显著提效：克隆网站时先打开目标站调研元素，开发完成后打开本地站点验证效果。
 
 ### 核心流程（通用）
 
-1. **打开页面**：`agent-browser --cdp 9222 open <url>`
-2. **获取可交互元素**：`agent-browser --cdp 9222 snapshot -i` → 得到 `@e1`、`@e2` 等引用及类型/文案
-3. **操作**：用 refs 执行 `click`、`fill`、`select`、`check` 等
-4. **页面变化后**：再次 `snapshot -i` 获取新 refs，再继续操作或断言
+1. **打开页面**：用 bb-browser 打开目标 URL（目标站 / 本地 `http://localhost:1420`）
+2. **抓取结构**：读取页面可交互元素与文案（按钮/输入框/菜单/列表项等），用于对齐“预期交互”
+3. **执行操作**：点击、输入、选择、勾选、拖拽等，覆盖主路径与边界情况
+4. **验证结果**：断言 UI 状态变化（列表新增/完成态/标签变化/详情面板同步等），并记录异常（报错、卡死、数据不一致）
 
 ### 场景一：调研目标网站（克隆/仿站）
 
 目标：了解要仿造的网站的 DOM 结构、可交互元素、文案与交互路径。
-
-```bash
-agent-browser --cdp 9222 open https://目标网站.com/页面
-agent-browser --cdp 9222 snapshot -i
-# 根据输出识别：导航、列表、表单、按钮等对应 @e1 @e2 ...
-# 需要文案或结构时：
-agent-browser --cdp 9222 get text @e1
-agent-browser --cdp 9222 get text body > page.txt
-# 可选：截图留档
-agent-browser --cdp 9222 screenshot
-```
 
 据此确定组件划分、数据结构与 IPC 设计，再进入开发。
 
@@ -159,34 +148,11 @@ agent-browser --cdp 9222 screenshot
 
 目标：开发完成后，在浏览器中打开本地前端，确认元素存在、可点击、表单可填写、流程可走通。
 
-```bash
-# 先启动本地前端（另起终端）：npm run dev 或 npm run tauri dev，记下 URL（如 http://localhost:1420
-agent-browser --cdp 9222 open http://localhost:1420
-agent-browser --cdp 9222 snapshot -i
-# 按设计逐项验证：点击侧栏、打开列表、新建任务、填写表单、提交等
-agent-browser --cdp 9222 click @e1
-agent-browser --cdp 9222 wait --load networkidle
-agent-browser --cdp 9222 snapshot -i
-agent-browser --cdp 9222 fill @e2 "测试任务"
-agent-browser --cdp 9222 click @e3
-# 需要时截图或保存页面文本做回归
-agent-browser --cdp 9222 screenshot
-```
-
 Tauri dev 为 `http://localhost:1420` 。
 
 ### 常用命令速查
 
-| 用途     | 命令 |
-|----------|------|
-| 打开页面 | `agent-browser --cdp 9222 open <url>` |
-| 可交互元素 | `agent-browser --cdp 9222 snapshot -i` |
-| 点击/填写 | `agent-browser --cdp 9222 click @e1`、`agent-browser --cdp 9222 fill @e2 "内容"` |
-| 等待     | `agent-browser --cdp 9222 wait --load networkidle`、`agent-browser --cdp 9222 wait 2000` |
-| 取文案   | `agent-browser --cdp 9222 get text @e1`、`agent-browser --cdp 9222 get text body > out.txt` |
-| 截图     | `agent-browser --cdp 9222 screenshot`、`agent-browser --cdp 9222 screenshot --full` |
-
-**注意**：页面跳转或 DOM 更新后必须重新 `snapshot -i`，否则旧 ref 会失效。完整命令与语义定位符见 [agent-browser SKILL](file:///Users/akm/Documents/agent-browser/skills/agent-browser/SKILL.md)。
+**注意**：页面跳转或 DOM 大更新后，务必重新获取当前页面的可交互元素树，再继续操作与断言（避免引用过期的元素）。
 
 ## 项目专用约定（本仓库）
 
@@ -202,7 +168,7 @@ Tauri dev 为 `http://localhost:1420` 。
 | Rust 深度      | rust-pro、rust-async-patterns 等 skill |
 | TypeScript 深度| typescript-pro、typescript-advanced-types 等 skill |
 | 流程与关键词   | 项目内或个人维护的 tauri-skills-quick-reference |
-| 浏览器自动化   | [agent-browser SKILL](file:///Users/akm/Documents/agent-browser/skills/agent-browser/SKILL.md)（完整命令、语义定位符、多会话等） |
+| 浏览器自动化   | bb-browser skill（用于打开页面、执行交互、截图取证） |
 
 ## 常见场景速查
 
@@ -210,7 +176,7 @@ Tauri dev 为 `http://localhost:1420` 。
 |------------|------|
 | 新建项目   | 架构设计 → 目录与 tauri.conf → 第一个 command + 前端 invoke |
 | 实现功能   | 先定 Rust 模型与 TS 类型 → 命令与 services → 组件与状态 |
-| 调研仿站   | agent-browser --cdp 9222 open 目标站 → snapshot -i → get text / screenshot，再设计组件与数据 |
-| 验证效果   | 启动本地前端 → agent-browser --cdp 9222 open localhost → snapshot -i → click/fill 逐项验证 |
+| 调研仿站   | bb-browser 打开目标站 → 提取结构/文案/交互路径 → 回到代码设计组件与数据 |
+| 验证效果   | 启动本地前端 → bb-browser 打开 localhost → 点击/填写/拖拽逐项验证并截图留档 |
 | 异步操作   | Rust async + spawn_blocking 区分；前端 debounce/批量 |
 | 复杂类型   | 泛型与 trait（Rust）+ 泛型与工具类型（TS）保持一致 |
